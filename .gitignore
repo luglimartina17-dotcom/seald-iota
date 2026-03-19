@@ -1,0 +1,7 @@
+﻿node_modules/
+iota-v1.17.2-windows-x86_64/
+*.exe
+*.tgz
+*.dll
+dist/
+build/

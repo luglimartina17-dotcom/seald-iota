@@ -1,0 +1,10 @@
+[package]
+name = "software_license"
+version = "1.0.0"
+edition = "2024.beta"
+
+[dependencies]
+Iota = { git = "https://github.com/iotaledger/iota.git", subdir = "crates/iota-framework/packages/iota-framework", rev = "framework/testnet" }
+
+[addresses]
+software_license = "0x0"

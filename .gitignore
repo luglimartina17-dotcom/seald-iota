@@ -5,3 +5,9 @@ iota-v1.17.2-windows-x86_64/
 *.dll
 dist/
 build/
+.venv/
+__pycache__/
+__MACOSX/
+*.pyc
+*.db
+.env

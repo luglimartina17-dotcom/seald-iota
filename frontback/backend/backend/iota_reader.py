@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-IOTA_RPC = os.getenv("IOTA_RPC", "https://api.devnet.iota.cafe")
+# Usa IOTA_RPC da .env, default a testnet
+IOTA_RPC = os.getenv("IOTA_RPC", "https://api.testnet.iota.cafe")
 
 
 def rpc_call(method: str, params: list):

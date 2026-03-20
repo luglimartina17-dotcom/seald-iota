@@ -7,4 +7,6 @@ export const REGISTRY_ID =
 export const CLOCK_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000006';
 
-export const BACKEND_URL = 'http://127.0.0.1:8000';
+// Usa variabile d'ambiente Vite, con fallback a localhost per sviluppo
+export const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000';

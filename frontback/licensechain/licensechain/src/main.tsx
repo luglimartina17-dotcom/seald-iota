@@ -1,8 +1,9 @@
-import React from 'react';
+﻿import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
 import '@iota/dapp-kit/dist/index.css';
+import './index.css';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { IotaClientProvider, WalletProvider } from '@iota/dapp-kit';

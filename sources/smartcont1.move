@@ -18,9 +18,11 @@ module software_license::software_license {
     const EInvalidExpiryDate: u64 = 7;
     const ELicenseRevoked: u64 = 8;
     const EVendorAlreadyRegistered: u64 = 9;
+    const EMaxDevicesReached: u64 = 10;
+    const ENoDevicesToRemove: u64 = 11;
+    const ENotOwner: u64 = 12;
 
     // Strutture dati
-
     public struct SOFTWARE_LICENSE has drop {}
 
     /// NFT LICENZA PRE-ATTIVAZIONE
@@ -50,7 +52,7 @@ module software_license::software_license {
         is_active: bool,
     }
 
-    /// Registry Vendor 
+    /// Registry Vendor
     public struct VendorRegistry has key {
         id: UID,
         vendors: Table<address, VendorInfo>,
@@ -63,8 +65,7 @@ module software_license::software_license {
         id: UID,
     }
 
-    // Eventi 
-
+    // Eventi
     public struct LicenseMinted has copy, drop {
         license_id: ID,
         product_id: String,
@@ -85,8 +86,18 @@ module software_license::software_license {
         revoked_at: u64,
     }
 
-    // Init - viene eseguita una sola volta al deploy
+    public struct DeviceAdded has copy, drop {
+        license_id: ID,
+        current_devices: u8,
+        max_devices: u8,
+    }
 
+    public struct DeviceRemoved has copy, drop {
+        license_id: ID,
+        current_devices: u8,
+    }
+
+    // Init - viene eseguita una sola volta al deploy
     fun init(witness: SOFTWARE_LICENSE, ctx: &mut TxContext) {
         let registry = VendorRegistry {
             id: object::new(ctx),
@@ -95,16 +106,14 @@ module software_license::software_license {
             total_licenses_minted: 0,
         };
         transfer::share_object(registry);
-
         let admin_cap = AdminCap {
             id: object::new(ctx),
         };
         transfer::transfer(admin_cap, sender(ctx));
-
         let _ = witness;
     }
 
-    // Funzioni principali 
+    // Funzioni principali
 
     /// Registrazione vendor
     public entry fun register_vendor(
@@ -115,9 +124,7 @@ module software_license::software_license {
     ) {
         let vendor_address = sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-
         assert!(!table::contains(&registry.vendors, vendor_address), EVendorAlreadyRegistered);
-
         let vendor_info = VendorInfo {
             vendor_address,
             company_name: string::utf8(company_name),
@@ -125,12 +132,11 @@ module software_license::software_license {
             total_licenses_issued: 0,
             is_active: true,
         };
-
         table::add(&mut registry.vendors, vendor_address, vendor_info);
         registry.total_vendors = registry.total_vendors + 1;
     }
 
-    /// Mint licenza NFT 
+    /// Mint licenza NFT
     public entry fun mint_license(
         registry: &mut VendorRegistry,
         product_id: vector<u8>,
@@ -143,17 +149,13 @@ module software_license::software_license {
     ) {
         let vendor = sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-
         assert!(table::contains(&registry.vendors, vendor), EVendorNotRegistered);
-
         if (expiry_date != 0) {
             assert!(expiry_date > timestamp, EInvalidExpiryDate);
         };
-
         let activation_code_hash = hash::sha3_256(activation_code);
         let license_uid = object::new(ctx);
         let license_id = object::uid_to_inner(&license_uid);
-
         let license = SoftwareLicense {
             id: license_uid,
             product_id: string::utf8(product_id),
@@ -170,22 +172,19 @@ module software_license::software_license {
             revoked: false,
             revoked_at: 0,
         };
-
         let vendor_info = table::borrow_mut(&mut registry.vendors, vendor);
         vendor_info.total_licenses_issued = vendor_info.total_licenses_issued + 1;
         registry.total_licenses_minted = registry.total_licenses_minted + 1;
-
         event::emit(LicenseMinted {
             license_id,
             product_id: string::utf8(product_id),
             vendor,
             created_at: timestamp,
         });
-
         transfer::public_transfer(license, vendor);
     }
 
-    /// Attivazione licenza (consuma l'NFT e lo trasferisce all'utente)
+    /// Attivazione licenza
     public entry fun activate_license(
         mut license: SoftwareLicense,
         activation_code: vector<u8>,
@@ -194,44 +193,34 @@ module software_license::software_license {
     ) {
         let timestamp = clock::timestamp_ms(clock);
         let user = sender(ctx);
-
         assert!(license.is_active, ELicenseNotActive);
         assert!(!license.activated, ELicenseAlreadyActivated);
-
         let provided_hash = hash::sha3_256(activation_code);
         assert!(provided_hash == license.activation_code_hash, EInvalidActivationCode);
-
         if (license.expiry_date != 0) {
             assert!(timestamp < license.expiry_date, ELicenseExpired);
         };
-
         assert!(!license.revoked, ELicenseRevoked);
-
         let license_id = object::id(&license);
         let product_id_copy = license.product_id;
-
         license.activated = true;
         license.activated_at = timestamp;
-
         event::emit(LicenseActivated {
             license_id,
             product_id: product_id_copy,
             activated_by: user,
             activated_at: timestamp,
         });
-
         transfer::public_transfer(license, user);
     }
 
     /// Verifica licenza
     public fun is_license_valid(license: &SoftwareLicense, clock: &Clock): bool {
         let timestamp = clock::timestamp_ms(clock);
-
         if (!license.is_active) return false;
         if (!license.activated) return false;
         if (license.revoked) return false;
         if (license.expiry_date != 0 && timestamp >= license.expiry_date) return false;
-
         true
     }
 
@@ -243,17 +232,53 @@ module software_license::software_license {
     ) {
         let caller = sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-
         assert!(caller == license.vendor, ENotVendor);
-
         license.revoked = true;
         license.revoked_at = timestamp;
         license.is_active = false;
-
         event::emit(LicenseRevoked {
             license_id: object::id(license),
             revoked_by: caller,
             revoked_at: timestamp,
+        });
+    }
+
+    /// Aggiunge un device alla licenza (solo il proprietario)
+    public entry fun add_device(
+        license: &mut SoftwareLicense,
+        ctx: &mut TxContext
+    ) {
+        let caller = sender(ctx);
+        // Solo il proprietario corrente (chi ha la licenza nel wallet) puo aggiungere device
+        // In Move su IOTA, il check di ownership e' garantito dal fatto che la licenza
+        // e' un oggetto con key: solo chi la possiede puo passarla come &mut
+        assert!(license.is_active, ELicenseNotActive);
+        assert!(license.activated, ELicenseNotActive);
+        assert!(!license.revoked, ELicenseRevoked);
+        assert!(license.current_devices < license.max_devices, EMaxDevicesReached);
+        let _ = caller;
+        license.current_devices = license.current_devices + 1;
+        event::emit(DeviceAdded {
+            license_id: object::id(license),
+            current_devices: license.current_devices,
+            max_devices: license.max_devices,
+        });
+    }
+
+    /// Rimuove un device dalla licenza (solo il proprietario)
+    public entry fun remove_device(
+        license: &mut SoftwareLicense,
+        ctx: &mut TxContext
+    ) {
+        let caller = sender(ctx);
+        assert!(license.is_active, ELicenseNotActive);
+        assert!(!license.revoked, ELicenseRevoked);
+        assert!(license.current_devices > 0, ENoDevicesToRemove);
+        let _ = caller;
+        license.current_devices = license.current_devices - 1;
+        event::emit(DeviceRemoved {
+            license_id: object::id(license),
+            current_devices: license.current_devices,
         });
     }
 }

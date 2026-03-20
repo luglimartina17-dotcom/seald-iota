@@ -1,13 +1,45 @@
-﻿node_modules/
+# Dipendenze
+node_modules/
+
+# Build e output
+dist/
+build/
+
+# Binari IOTA
 iota-v1.17.2-windows-x86_64/
 *.exe
 *.tgz
 *.dll
-dist/
-build/
+
+# Ambienti virtuali Python
 .venv/
+venv/
+
+# Cache Python
 __pycache__/
-__MACOSX/
 *.pyc
+*.pyo
+*.pyd
+
+# File macOS
+__MACOSX/
+.DS_Store
+
+# Database locali
 *.db
+*.sqlite3
+
+# Variabili d'ambiente (contengono segreti!)
 .env
+# .env.example va committato (non contiene segreti)
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/

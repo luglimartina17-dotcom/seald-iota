@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any, Dict
 
 
 class RegisterVendorRequest(BaseModel):
@@ -42,3 +42,17 @@ class LicenseCheckResponse(BaseModel):
     revoked: Optional[bool] = None
     expiry_date: Optional[int] = None
     reason: Optional[str] = None
+
+
+class AuditResponse(BaseModel):
+    found: bool
+    tx_digest: Optional[str] = None
+    onchain_object_id: Optional[str] = None
+    product_id: Optional[str] = None
+    license_key: Optional[str] = None
+    vendor_wallet: Optional[str] = None
+    owner_wallet: Optional[str] = None
+    network: Optional[str] = None
+    issued_at: Optional[str] = None
+    audit_payload: Optional[Dict[str, Any]] = None
+    signature: Optional[str] = None

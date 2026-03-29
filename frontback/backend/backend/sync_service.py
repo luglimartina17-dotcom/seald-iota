@@ -1,7 +1,9 @@
+from typing import Optional
 from sqlalchemy.orm import Session
+
 import models
 from iota_reader import get_transaction
-from typing import Optional
+from audit_service import create_or_update_audit_for_license
 
 LICENSE_TYPE_SUFFIX = "::software_license::SoftwareLicense"
 
@@ -32,7 +34,6 @@ def sync_submitted_transactions(db: Session):
         try:
             tx_data = get_transaction(tx_row.tx_digest)
         except Exception:
-            # RPC non disponibile o tx non ancora trovata
             continue
 
         effects = tx_data.get("effects", {}) or {}
@@ -42,21 +43,23 @@ def sync_submitted_transactions(db: Session):
         if status == "success":
             tx_row.status = "confirmed"
 
-            # Se è un mint, proviamo a ricavare il vero object id della licenza
+            license_row = (
+                db.query(models.License)
+                .filter(models.License.tx_digest == tx_row.tx_digest)
+                .first()
+            )
+
             if tx_row.action == "mint_license":
                 created_license_id = extract_created_license_id(tx_data)
 
-                if created_license_id:
-                    license_row = (
-                        db.query(models.License)
-                        .filter(models.License.tx_digest == tx_row.tx_digest)
-                        .first()
-                    )
-                    if license_row and not license_row.onchain_license_id:
-                        license_row.onchain_license_id = created_license_id
-                        tx_row.object_id = created_license_id
+                if created_license_id and license_row and not license_row.onchain_license_id:
+                    license_row.onchain_license_id = created_license_id
+                    tx_row.object_id = created_license_id
 
             db.commit()
+
+            if license_row:
+                create_or_update_audit_for_license(db, license_row)
 
         elif status == "failure":
             tx_row.status = "failed"

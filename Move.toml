@@ -4,7 +4,6 @@ version = "1.0.0"
 edition = "2024.beta"
 
 [dependencies]
-Iota = { git = "https://github.com/iotaledger/iota.git", subdir = "crates/iota-framework/packages/iota-framework", rev = "framework/testnet" }
 
 [addresses]
 digital_rights = "0x0"

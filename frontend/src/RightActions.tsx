@@ -55,8 +55,30 @@ type VerifyHistory = {
   time: string;
 };
 
+type AuditRecord = {
+  found: boolean;
+  tx_digest?: string;
+  onchain_object_id?: string;
+  product_id?: string;
+  right_key?: string;
+  vendor_wallet?: string;
+  owner_wallet?: string;
+  network?: string;
+  issued_at?: string;
+  signature?: string;
+  detail?: string;
+};
+
+type DisclosureResult = {
+  found: boolean;
+  disclosed_fields?: string[];
+  payload?: Record<string, unknown>;
+  signature?: string;
+  detail?: string;
+};
+
 interface Props {
-  currentPage: 'dashboard' | 'verify';
+  currentPage: 'dashboard' | 'verify' | 'audit';
   account: ReturnType<typeof useCurrentAccount>;
   showToast: (msg: string) => void;
 }
@@ -100,6 +122,21 @@ export function RightActions({ currentPage, account, showToast }: Props) {
       return [];
     }
   });
+
+  /* --- Audit State --- */
+  const [auditDigest, setAuditDigest] = useState('');
+  const [auditRecord, setAuditRecord] = useState<AuditRecord | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [discloseDigest, setDiscloseDigest] = useState('');
+  const [discloseFields, setDiscloseFields] = useState<string[]>([]);
+  const [discloseResult, setDiscloseResult] = useState<DisclosureResult | null>(null);
+  const [discloseLoading, setDiscloseLoading] = useState(false);
+
+  const DISCLOSABLE_FIELDS = [
+    'version', 'record_type', 'product_id', 'right_key', 'tx_digest',
+    'onchain_object_id', 'vendor_wallet', 'owner_wallet', 'network',
+    'status', 'revoked', 'expiry_date', 'issued_at',
+  ];
 
   /* --- Load rights from backend --- */
   useEffect(() => {
@@ -362,6 +399,109 @@ export function RightActions({ currentPage, account, showToast }: Props) {
     } finally {
       setVerifyLoading(false);
     }
+  }
+
+  /* --- Audit: View Record --- */
+  async function viewAudit() {
+    const digest = auditDigest.trim();
+    if (!digest) return;
+    setAuditLoading(true);
+    setAuditRecord(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/audit/${digest}`);
+      if (res.ok) {
+        setAuditRecord(await res.json());
+      } else {
+        setAuditRecord({ found: false, detail: 'Audit record not found' });
+      }
+    } catch {
+      showToast('Backend unreachable');
+    } finally {
+      setAuditLoading(false);
+    }
+  }
+
+  /* --- Audit: Export JSON --- */
+  async function exportAudit() {
+    const digest = auditDigest.trim();
+    if (!digest) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/audit/${digest}/export/partial`, { method: 'POST' });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-${digest}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Audit JSON exported');
+      } else {
+        showToast('Export failed — record not found');
+      }
+    } catch {
+      showToast('Backend unreachable');
+    }
+  }
+
+  /* --- Audit: Selective Disclosure --- */
+  async function discloseAudit() {
+    const digest = discloseDigest.trim();
+    if (!digest || discloseFields.length === 0) {
+      showToast('Enter a digest and select at least one field');
+      return;
+    }
+    setDiscloseLoading(true);
+    setDiscloseResult(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/audit/${digest}/disclose`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: discloseFields }),
+      });
+      if (res.ok) {
+        setDiscloseResult(await res.json());
+      } else {
+        setDiscloseResult({ found: false, detail: 'Audit record not found' });
+      }
+    } catch {
+      showToast('Backend unreachable');
+    } finally {
+      setDiscloseLoading(false);
+    }
+  }
+
+  /* --- Audit: Export Disclosed JSON --- */
+  async function exportDisclosed() {
+    const digest = discloseDigest.trim();
+    if (!digest || discloseFields.length === 0) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/audit/${digest}/disclose/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: discloseFields }),
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `disclosed-${digest}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Disclosed JSON exported');
+      } else {
+        showToast('Export failed');
+      }
+    } catch {
+      showToast('Backend unreachable');
+    }
+  }
+
+  function toggleField(field: string) {
+    setDiscloseFields((prev) =>
+      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
+    );
   }
 
   /* --- Status badge helper --- */
@@ -854,6 +994,218 @@ export function RightActions({ currentPage, account, showToast }: Props) {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ============ AUDIT PAGE ============ */}
+      <div className={`page ${currentPage === 'audit' ? 'active' : ''}`}>
+        <div className="container">
+          <div className="section-header">
+            <div>
+              <div className="section-title">
+                Audit <span>Records</span>
+              </div>
+              <div className="section-desc">
+                // view, export, and selectively disclose audit records
+              </div>
+            </div>
+          </div>
+
+          {/* Panel 1 — View Audit Record */}
+          <div className="create-panel" style={{ marginBottom: 24 }}>
+            <div className="create-panel-header">
+              <div>
+                <div className="table-title">View Audit Record</div>
+                <div className="section-desc" style={{ marginTop: 2 }}>
+                  // retrieve a signed audit record by transaction digest
+                </div>
+              </div>
+            </div>
+            <div className="create-panel-body open">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Transaction Digest</label>
+                  <input
+                    className="form-input"
+                    placeholder="e.g. 7xKp3..."
+                    value={auditDigest}
+                    onChange={(e) => setAuditDigest(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') viewAudit(); }}
+                  />
+                </div>
+                <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                  <button className="btn btn-primary" onClick={viewAudit} disabled={auditLoading}>
+                    {auditLoading ? <><span className="spinner" /> Loading...</> : 'View Audit'}
+                  </button>
+                </div>
+              </div>
+
+              {auditRecord && (
+                <div style={{ marginTop: 16 }}>
+                  {auditRecord.found ? (
+                    <div className="result-grid">
+                      {[
+                        ['TX Digest', auditRecord.tx_digest],
+                        ['Object ID', auditRecord.onchain_object_id],
+                        ['Product ID', auditRecord.product_id],
+                        ['Right Key', auditRecord.right_key],
+                        ['Vendor', auditRecord.vendor_wallet],
+                        ['Owner', auditRecord.owner_wallet],
+                        ['Network', auditRecord.network],
+                        ['Issued At', auditRecord.issued_at],
+                      ].map(([label, value]) => (
+                        <div className="result-field" key={label}>
+                          <div className="result-field-label">{label}</div>
+                          <div className="result-field-value">{value || '\u2014'}</div>
+                        </div>
+                      ))}
+                      <div className="result-field" style={{ gridColumn: '1 / -1' }}>
+                        <div className="result-field-label">Signature</div>
+                        <div className="result-field-value">{auditRecord.signature || '\u2014'}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 12 }}>
+                      {auditRecord.detail || 'Audit record not found'}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Panel 2 — Export Audit */}
+          <div className="create-panel" style={{ marginBottom: 24 }}>
+            <div className="create-panel-header">
+              <div>
+                <div className="table-title">Export Audit</div>
+                <div className="section-desc" style={{ marginTop: 2 }}>
+                  // download the full audit record as JSON
+                </div>
+              </div>
+            </div>
+            <div className="create-panel-body open">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Transaction Digest</label>
+                  <input
+                    className="form-input"
+                    placeholder="e.g. 7xKp3..."
+                    value={auditDigest}
+                    onChange={(e) => setAuditDigest(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                  <button className="btn btn-primary" onClick={exportAudit}>
+                    Export JSON
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Panel 3 — Selective Disclosure */}
+          <div className="create-panel">
+            <div className="create-panel-header">
+              <div>
+                <div className="table-title">Selective Disclosure</div>
+                <div className="section-desc" style={{ marginTop: 2 }}>
+                  // reveal only chosen fields with a new signed payload
+                </div>
+              </div>
+            </div>
+            <div className="create-panel-body open">
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Transaction Digest</label>
+                  <input
+                    className="form-input"
+                    placeholder="e.g. 7xKp3..."
+                    value={discloseDigest}
+                    onChange={(e) => setDiscloseDigest(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label className="form-label" style={{ marginBottom: 8, display: 'block' }}>
+                  Fields to Disclose
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {DISCLOSABLE_FIELDS.map((field) => (
+                    <label
+                      key={field}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontFamily: 'var(--mono)',
+                        fontSize: 11,
+                        color: discloseFields.includes(field) ? 'var(--accent)' : 'var(--muted)',
+                        background: discloseFields.includes(field) ? 'var(--accent-dim)' : 'var(--surface2)',
+                        border: `1px solid ${discloseFields.includes(field) ? 'var(--accent)' : 'var(--border)'}`,
+                        padding: '4px 10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={discloseFields.includes(field)}
+                        onChange={() => toggleField(field)}
+                        style={{ display: 'none' }}
+                      />
+                      {field}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className="btn btn-primary"
+                  onClick={discloseAudit}
+                  disabled={discloseLoading}
+                >
+                  {discloseLoading ? <><span className="spinner" /> Loading...</> : 'Disclose'}
+                </button>
+                {discloseResult?.found && (
+                  <button className="btn btn-ghost" onClick={exportDisclosed}>
+                    Export Disclosed JSON
+                  </button>
+                )}
+              </div>
+
+              {discloseResult && (
+                <div style={{ marginTop: 16 }}>
+                  {discloseResult.found ? (
+                    <>
+                      <div style={{ marginBottom: 12 }}>
+                        <div className="form-label" style={{ marginBottom: 4 }}>Disclosed Fields</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--accent)' }}>
+                          {discloseResult.disclosed_fields?.join(', ') || '\u2014'}
+                        </div>
+                      </div>
+                      <div className="result-field" style={{ marginBottom: 12 }}>
+                        <div className="result-field-label">Payload</div>
+                        <pre className="result-field-value" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+                          {JSON.stringify(discloseResult.payload, null, 2)}
+                        </pre>
+                      </div>
+                      <div className="result-field">
+                        <div className="result-field-label">Signature</div>
+                        <div className="result-field-value">{discloseResult.signature || '\u2014'}</div>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ color: 'var(--muted)', fontFamily: 'var(--mono)', fontSize: 12 }}>
+                      {discloseResult.detail || 'Audit record not found'}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

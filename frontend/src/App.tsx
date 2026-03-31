@@ -5,7 +5,7 @@ import './App.css';
 
 export default function App() {
   const account = useCurrentAccount();
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'verify'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'verify' | 'audit'>('dashboard');
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -45,6 +45,12 @@ export default function App() {
             onClick={() => setCurrentPage('verify')}
           >
             Check
+          </button>
+          <button
+            className={`nav-tab ${currentPage === 'audit' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('audit')}
+          >
+            Audit
           </button>
         </div>
 

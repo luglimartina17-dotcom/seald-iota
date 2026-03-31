@@ -8,10 +8,10 @@ Move modules on IOTA MoveVM for the SealD digital rights platform.
 
 | Struct | Abilities | Description |
 |--------|-----------|-------------|
-| `DigitalRight` | key, store | On-chain digital right object with ownership, expiry, revocation, device limits |
-| `VendorRegistry` | key | Shared registry of registered vendors |
+| `DigitalRight` | key, store | On-chain digital right with fields: `product_id`, `right_key`, `vendor`, `activation_code_hash`, `created_at`, `expiry_date`, `is_active`, `activated`, `activated_at`, `max_devices`, `current_devices`, `revoked`, `revoked_at` |
+| `VendorRegistry` | key | Shared registry of registered vendors (vendor authorization) |
 | `VendorInfo` | store | Individual vendor metadata |
-| `AdminCap` | key, store | Admin capability object |
+| `AdminCap` | key, store | Admin capability object (transferred on deployment) |
 
 ### Entry Functions
 

@@ -4,9 +4,14 @@ React/TypeScript frontend for the SealD digital rights platform.
 
 ## Pages
 
-- **Dashboard** — vendor registration, right minting, activation, revocation, rights table
-- **Check** — public right verification by on-chain ID
-- **Audit** — view audit records, export audit JSON, selective disclosure form
+- **DashboardPage** (`DashboardPage.tsx`) — vendor dashboard: register vendor, mint rights, activate, revoke, renew, view rights table with stats
+- **VerifyPage** (`VerifyPage.tsx`) — public verification page (wallet-free):
+  - Hero section with search bar (enter any on-chain right ID)
+  - Status card showing VALID/INVALID/REVOKED/EXPIRED with field grid (product ID, wallets, expiry, etc.)
+  - Audit trail section with transaction digest, HMAC signature, network badge, timestamp
+  - Selective disclosure section with 13 toggleable field chips, live JSON preview, Disclose + Export buttons
+
+The app uses a pixel-art design system with `Press Start 2P` font and `#2752F5` blue accent.
 
 ## API Integration
 
@@ -18,12 +23,13 @@ All API calls target the backend at `BACKEND_URL` (configured in `iotaConfig.ts`
 | `POST /right/mint` | Dashboard — mint new right |
 | `POST /right/activate` | Dashboard — activate right |
 | `POST /right/revoke` | Dashboard — revoke right |
+| `POST /right/renew` | Dashboard — renew right |
 | `GET /right/check/all` | Dashboard — load rights table |
-| `GET /right/check/{id}` | Check — verify right |
-| `GET /audit/{tx_digest}` | Audit — view audit record |
-| `POST /audit/{tx_digest}/export/partial` | Audit — export full audit JSON |
-| `POST /audit/{tx_digest}/disclose` | Audit — selective disclosure |
-| `POST /audit/{tx_digest}/disclose/export` | Audit — export disclosed JSON |
+| `GET /right/verify/{right_id}` | Verify — unified verification (status + audit) |
+| `GET /audit/{tx_digest}` | Verify — view audit record |
+| `POST /audit/{tx_digest}/export/partial` | Verify — export full audit JSON |
+| `POST /audit/{tx_digest}/disclose` | Verify — selective disclosure |
+| `POST /audit/{tx_digest}/disclose/export` | Verify — export disclosed JSON |
 
 ## IOTA Integration
 

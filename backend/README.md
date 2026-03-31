@@ -18,6 +18,7 @@ Python/FastAPI backend for the SealD digital rights platform.
 | POST | `/right/renew` | API key | Renew a right (consume-and-recreate) |
 | GET | `/right/check/all` | Public | List all rights |
 | GET | `/right/check/{right_id}` | Public | Verify a right against chain + DB |
+| GET | `/right/verify/{right_id}` | Public | Unified public verification — returns right status + audit trail data in one call (DB fallback when chain is unreachable) |
 
 ### Audit & Selective Disclosure
 | Method | Path | Auth | Description |

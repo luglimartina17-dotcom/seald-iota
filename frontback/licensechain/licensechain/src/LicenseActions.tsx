@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
@@ -132,13 +132,13 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
 
   /* â”€â”€â”€ Clipboard â”€â”€â”€ */
   function copyKey(text: string) {
-    navigator.clipboard.writeText(text).then(() => showToast('âœ“ Copiato: ' + text));
+    navigator.clipboard.writeText(text).then(() => showToast('âœ“ Copied: ' + text));
   }
 
   /* â”€â”€â”€ Register Vendor â”€â”€â”€ */
   async function registerVendor() {
-    if (!account) { showToast('âš  Collega il wallet'); return; }
-    if (!companyName.trim()) { showToast('âš  Inserisci il nome azienda'); return; }
+    if (!account) { showToast('âš  Connect your wallet'); return; }
+    if (!companyName.trim()) { showToast('âš  Enter your company name'); return; }
     try {
       const tx = new Transaction();
       tx.moveCall({
@@ -164,19 +164,19 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         }),
       });
 
-      showToast(`âœ“ Vendor registrato! Digest: ${result.digest.slice(0, 16)}...`);
+      showToast(`âœ“ Vendor registered! Digest: ${result.digest.slice(0, 16)}...`);
       setCompanyName('');
     } catch (error) {
-      console.error('Errore registerVendor:', error);
-      showToast('âš  Errore registrazione vendor');
+      console.error('Error registerVendor:', error);
+      showToast('âš  Vendor registration Error');
     }
   }
 
   /* â”€â”€â”€ Mint License â”€â”€â”€ */
   async function mintLicense() {
-    if (!account) { showToast('âš  Collega il wallet'); return; }
+    if (!account) { showToast('âš  Connect your wallet'); return; }
     if (!productId.trim() || !licenseKey.trim() || !activationCode.trim()) {
-      showToast('âš  Compila tutti i campi');
+      showToast('âš  Please fill in all fields');
       return;
     }
     setMinting(true);
@@ -233,9 +233,9 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
           }),
         });
         setLicenseObjectId(onchainLicenseId);
-        showToast(`âœ“ Licenza mintata! ID: ${onchainLicenseId.slice(0, 16)}...`);
+        showToast(`âœ“ Right minted successfully! ID: ${onchainLicenseId.slice(0, 16)}...`);
       } else {
-        showToast(`âœ“ Mint riuscito! Digest: ${result.digest.slice(0, 16)}...`);
+        showToast(`âœ“ Mint complete! Digest: ${result.digest.slice(0, 16)}...`);
       }
 
       setProductId('');
@@ -246,8 +246,8 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
       setFormOpen(false);
       fetchLicenses();
     } catch (error) {
-      console.error('Errore mintLicense:', error);
-      showToast('âš  Errore durante il mint');
+      console.error('Error mintRight:', error);
+      showToast('âš  Error during mint');
     } finally {
       setMinting(false);
     }
@@ -255,8 +255,8 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
 
   /* â”€â”€â”€ Activate License â”€â”€â”€ */
   async function activateLicense() {
-    if (!account) { showToast('âš  Collega il wallet'); return; }
-    if (!licenseObjectId) { showToast('âš  Inserisci un license object ID'); return; }
+    if (!account) { showToast('âš  Connect your wallet'); return; }
+    if (!licenseObjectId) { showToast('âš  Enter a right object ID'); return; }
     try {
       const tx = new Transaction();
       tx.moveCall({
@@ -282,18 +282,18 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         }),
       });
 
-      showToast(`âœ“ Licenza attivata! Digest: ${result.digest.slice(0, 16)}...`);
+      showToast(`âœ“ Right activated successfully! Digest: ${result.digest.slice(0, 16)}...`);
       fetchLicenses();
     } catch (error) {
-      console.error('Errore activateLicense:', error);
-      showToast('âš  Errore attivazione');
+      console.error('Error activateRight:', error);
+      showToast('âš  Activation Error');
     }
   }
 
   /* â”€â”€â”€ Revoke License â”€â”€â”€ */
   async function revokeLicense() {
-    if (!account) { showToast('âš  Collega il wallet'); return; }
-    if (!licenseObjectId) { showToast('âš  Inserisci un license object ID'); return; }
+    if (!account) { showToast('âš  Connect your wallet'); return; }
+    if (!licenseObjectId) { showToast('âš  Enter a right object ID'); return; }
     try {
       const tx = new Transaction();
       tx.moveCall({
@@ -315,11 +315,11 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         }),
       });
 
-      showToast(`âœ“ Licenza revocata! Digest: ${result.digest.slice(0, 16)}...`);
+      showToast(`âœ“ Right revoked! Digest: ${result.digest.slice(0, 16)}...`);
       fetchLicenses();
     } catch (error) {
-      console.error('Errore revokeLicense:', error);
-      showToast('âš  Errore revoca');
+      console.error('Error revokeRight:', error);
+      showToast('âš  Revoke Error');
     }
   }
 
@@ -354,11 +354,11 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
           found: false,
           valid: false,
           status: 'not_found',
-          reason: 'Licenza non trovata',
+          reason: 'Right not found',
         });
       }
     } catch {
-      showToast('âš  Backend non raggiungibile');
+      showToast('âš  Backend unreachable');
     } finally {
       setVerifyLoading(false);
     }
@@ -380,14 +380,14 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
   }
 
   function statusLabel(status: string, revoked: boolean): string {
-    if (revoked) return 'Revocata';
+    if (revoked) return 'Revoked';
     switch (status) {
       case 'minted':
-        return 'Mintata';
+        return 'Minted';
       case 'activated':
-        return 'Attiva';
+        return 'Activated';
       case 'submitted':
-        return 'In Attesa';
+        return 'Submitted';
       default:
         return status;
     }
@@ -413,28 +413,28 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
               <div className="section-title">
                 Dashboard <span>Vendor</span>
               </div>
-              <div className="section-desc">// gestione licenze Â· blockchain IOTA</div>
+              <div className="section-desc">// IOTA blockchain Â· right management</div>
             </div>
           </div>
 
           {!account ? (
             <div className="wallet-prompt">
-              Collega il wallet IOTA per gestire le licenze.
+              Connect your IOTA wallet to manage your rights.
             </div>
           ) : (
             <>
               {/* Stats */}
               <div className="stats-row">
                 <div className="stat-card" style={{ animationDelay: '0s' }}>
-                  <div className="stat-label">Licenze Totali</div>
+                  <div className="stat-label">Total Rights</div>
                   <div className="stat-value">{totalCount}</div>
                 </div>
                 <div className="stat-card" style={{ animationDelay: '0.07s' }}>
-                  <div className="stat-label">Mintate su Blockchain</div>
+                  <div className="stat-label">Minted on Blockchain</div>
                   <div className="stat-value green">{mintedCount}</div>
                 </div>
                 <div className="stat-card" style={{ animationDelay: '0.14s' }}>
-                  <div className="stat-label">In Attesa di Mint</div>
+                  <div className="stat-label">Mint Pending</div>
                   <div className="stat-value yellow">{pendingCount}</div>
                 </div>
               </div>
@@ -442,18 +442,18 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
               {/* License Table */}
               <div className="table-wrap">
                 <div className="table-header">
-                  <span className="table-title">Gestione Licenze</span>
-                  <span className="tag">Crea e minta le licenze sulla blockchain</span>
+                  <span className="table-title">Right Management</span>
+                  <span className="tag">Create and mint your rights on blockchain</span>
                 </div>
                 <table>
                   <thead>
                     <tr>
-                      <th>Prodotto</th>
-                      <th>Chiave Licenza</th>
+                      <th>Product</th>
+                      <th>Right Key</th>
                       <th>Owner</th>
-                      <th>Stato</th>
+                      <th>Status</th>
                       <th>Blockchain Hash</th>
-                      <th>Azioni</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -461,7 +461,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       <tr>
                         <td colSpan={6}>
                           <div className="loading-row">
-                            <span className="spinner" /> Caricamento...
+                            <span className="spinner" /> Loading...
                           </div>
                         </td>
                       </tr>
@@ -469,7 +469,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       <tr>
                         <td colSpan={6}>
                           <div className="loading-row">
-                            Nessuna licenza. Crea la prima con il form qui sotto.
+                            No right found. Create your first one using the form below.
                           </div>
                         </td>
                       </tr>
@@ -520,10 +520,10 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                                     setActivationCode('');
                                   }}
                                 >
-                                  Attiva
+                                  Active
                                 </button>
                               ) : (
-                                <button className="btn btn-completed">âœ“ Completata</button>
+                                <button className="btn btn-completed">âœ“ Complete</button>
                               )}
                             </div>
                           </td>
@@ -538,16 +538,16 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
               <div className="create-panel" style={{ marginBottom: 24 }}>
                 <div className="create-panel-header">
                   <div>
-                    <div className="table-title">Registra Vendor</div>
+                    <div className="table-title">Register Vendor</div>
                     <div className="section-desc" style={{ marginTop: 2 }}>
-                      // registra l'azienda sulla blockchain IOTA
+                      // register company on IOTA blockchain
                     </div>
                   </div>
                 </div>
                 <div className="create-panel-body open">
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Nome Azienda</label>
+                      <label className="form-label">Company name</label>
                       <input
                         className="form-input"
                         placeholder="es. MioSoftware Srl"
@@ -557,7 +557,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                     </div>
                     <div className="form-group" style={{ justifyContent: 'flex-end' }}>
                       <button className="btn btn-primary" onClick={registerVendor}>
-                        Registra Vendor
+                        Register Vendor
                       </button>
                     </div>
                   </div>
@@ -568,9 +568,9 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
               <div className="create-panel">
                 <div className="create-panel-header">
                   <div>
-                    <div className="table-title">+ Crea Nuova Licenza</div>
+                    <div className="table-title">+ Create New Right</div>
                     <div className="section-desc" style={{ marginTop: 2 }}>
-                      // genera e registra sulla blockchain IOTA
+                      // generate and register on IOTA blockchain 
                     </div>
                   </div>
                   <button className="btn btn-primary" onClick={() => setFormOpen(!formOpen)}>
@@ -589,7 +589,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">License Key</label>
+                      <label className="form-label">Right Key</label>
                       <input
                         className="form-input"
                         placeholder="es. SP25-XXXX-YYYY-ZZZZ"
@@ -609,7 +609,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Scadenza (ms, 0 = nessuna)</label>
+                      <label className="form-label">Expiry Date (ms, 0 = none)</label>
                       <input
                         className="form-input"
                         placeholder="0"
@@ -641,11 +641,11 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                           <span className="spinner" /> Mining...
                         </>
                       ) : (
-                        'â¬¡ Mint Licenza'
+                        'â¬¡ Mint Right'
                       )}
                     </button>
                     <button className="btn btn-ghost" onClick={() => setFormOpen(false)}>
-                      Annulla
+                      Cancel
                     </button>
                   </div>
                 </div>
@@ -656,16 +656,16 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 <div className="create-panel" style={{ marginTop: 24 }}>
                   <div className="create-panel-header">
                     <div>
-                      <div className="table-title">Azioni Licenza</div>
+                      <div className="table-title">Right Actions</div>
                       <div className="section-desc" style={{ marginTop: 2 }}>
-                        // attiva, revoca o verifica una licenza specifica
+                        // activate, revoke or verify a right 
                       </div>
                     </div>
                   </div>
                   <div className="create-panel-body open">
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">License Object ID</label>
+                        <label className="form-label">Right Object ID</label>
                         <input
                           className="form-input"
                           placeholder="0x..."
@@ -674,10 +674,10 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Activation Code (per attivare)</label>
+                        <label className="form-label">Activation Code (to activate)</label>
                         <input
                           className="form-input"
-                          placeholder="Codice segreto"
+                          placeholder="secret code"
                           value={activationCode}
                           onChange={(e) => setActivationCode(e.target.value)}
                         />
@@ -685,10 +685,10 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                     </div>
                     <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                       <button className="btn btn-primary" onClick={activateLicense}>
-                        Attiva Licenza
+                        Activate Right
                       </button>
                       <button className="btn btn-danger" onClick={revokeLicense}>
-                        Revoca Licenza
+                        Revoke Right
                       </button>
                     </div>
                   </div>
@@ -705,25 +705,25 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
           <div className="section-header">
             <div>
               <div className="section-title">
-                Verifica <span>Licenza</span>
+                Verify <span>Right</span>
               </div>
               <div className="section-desc">
-                // controlla l'autenticita sulla blockchain IOTA
+                // check the authenticity on the IOTA blockchain
               </div>
             </div>
           </div>
 
           {/* Verify Hero */}
           <div className="verify-hero">
-            <div className="verify-title">Verifica Licenza</div>
+            <div className="verify-title">Verify Right</div>
             <div className="verify-desc">
-              Inserisci l'ID on-chain della licenza per verificarne la validita
-              sulla blockchain
+              Enter the on-chain right ID to verify its validity
+              on the blockchain
             </div>
             <div className="verify-input-row">
               <input
                 className="verify-input"
-                placeholder="es. 0x831ad445..."
+                placeholder="ex. 0x831ad445..."
                 value={verifyInput}
                 onChange={(e) => setVerifyInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -741,7 +741,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                     <span className="spinner" /> ...
                   </>
                 ) : (
-                  'Verifica'
+                  'Verify'
                 )}
               </button>
             </div>
@@ -768,7 +768,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       verifyResult.valid ? 'valid' : 'invalid'
                     }`}
                   >
-                    {verifyResult.valid ? 'Licenza Valida' : 'Licenza Non Valida'}
+                    {verifyResult.valid ? 'Valid Right' : 'Invalid Right'}
                   </div>
                   <div
                     style={{
@@ -779,21 +779,21 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                     }}
                   >
                     {verifyResult.valid
-                      ? 'Verifica completata sulla blockchain IOTA'
-                      : verifyResult.reason || 'Nessuna corrispondenza trovata'}
+                      ? 'Verification on IOTA blockchain completed'
+                      : verifyResult.reason || 'No matches found'}
                   </div>
                 </div>
               </div>
               {verifyResult.found && (
                 <div className="result-grid">
                   <div className="result-field">
-                    <div className="result-field-label">Prodotto</div>
+                    <div className="result-field-label">Product</div>
                     <div className="result-field-value">
                       {verifyResult.product_id || 'â€”'}
                     </div>
                   </div>
                   <div className="result-field">
-                    <div className="result-field-label">Stato</div>
+                    <div className="result-field-label">Status</div>
                     <div
                       className="result-field-value"
                       style={{
@@ -832,7 +832,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
           {verifyHistory.length > 0 && (
             <div>
               <div className="table-title" style={{ marginBottom: 16 }}>
-                Verifiche Recenti
+                Recent Checks
               </div>
               <div className="history-list">
                 {verifyHistory.map((h, i) => (
@@ -844,7 +844,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                     <span
                       className={h.valid ? 'status minted' : 'status revoked'}
                     >
-                      {h.valid ? 'Valida' : 'Non Valida'}
+                      {h.valid ? 'Valid' : 'Invalid'}
                     </span>
                     <span className="history-key">{truncHash(h.key)}</span>
                     <span className="history-product">{h.product}</span>
@@ -860,25 +860,25 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
       {/* â•â•â•â•â•â•â•â•â•â•â•â• MINT MODAL â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div className={`modal-overlay ${modalOpen ? 'show' : ''}`}>
         <div className="modal">
-          <div className="modal-title">â¬¡ Conferma Mint</div>
+          <div className="modal-title">â¬¡ Confirm Mint</div>
           <div className="modal-desc">
-            // tx verra inviata sulla blockchain IOTA
+            // Sending TX to IOTA blockchain...
           </div>
           <div className="modal-body">
-            <div className="modal-body-label">CHIAVE</div>
+            <div className="modal-body-label">KEY</div>
             <div className="modal-body-value">{mintingKey}</div>
             <div className="modal-body-label" style={{ marginTop: 8 }}>
               NETWORK
             </div>
             <div>IOTA Testnet Â· Move VM</div>
             <div className="modal-body-label" style={{ marginTop: 8 }}>
-              GAS STIMATO
+              ESTIMATED GAS
             </div>
             <div>~0.001 MIOTA</div>
           </div>
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>
-              Annulla
+              Cancel
             </button>
             <button
               className="btn btn-primary"
@@ -887,7 +887,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 mintLicense();
               }}
             >
-              Conferma Mint
+              Confirm Mint
             </button>
           </div>
         </div>

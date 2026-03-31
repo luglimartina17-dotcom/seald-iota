@@ -9,7 +9,7 @@ An end-to-end system for issuing, anchoring, managing, and verifying digital rig
 - **FastAPI backend** with state mirror, transaction sync, HMAC-signed audit records, and selective disclosure
 - **Public verification endpoint** `GET /right/check/{id}` — cross-checks live chain data with the indexed DB
 - **Audit endpoints** — full audit record retrieval, partial export, and selective disclosure with signed payloads
-- **React/TypeScript dashboard** for vendors to mint, activate, revoke, and verify rights
+- **React/TypeScript dashboard** for vendors to mint, activate, revoke, and verify rights, with an audit page for record viewing, export, and selective disclosure
 
 ## Planned Roadmap
 
@@ -29,7 +29,7 @@ The system has three tiers:
 
 2. **Backend** (Python/FastAPI + SQLite) — orchestration and persistence layer. Exposes REST APIs, stores an indexed mirror of on-chain rights and transaction records, updates them by polling an IOTA testnet RPC node, and generates HMAC-signed audit records with selective disclosure.
 
-3. **Frontend** (React/TypeScript) — vendor dashboard for minting, activating, revoking, and verifying rights. Connects to IOTA wallets via `@iota/dapp-kit` for transaction signing.
+3. **Frontend** (React/TypeScript) — vendor dashboard for minting, activating, revoking, and verifying rights, plus an audit page for viewing, exporting, and selectively disclosing audit records. Connects to IOTA wallets via `@iota/dapp-kit` for transaction signing.
 
 ## Repository Structure
 
@@ -49,7 +49,7 @@ backend/
 frontend/
   src/
     App.tsx               # Main React component with navigation
-    RightActions.tsx        # Dashboard and verification UI (RightActions component)
+    RightActions.tsx        # Dashboard, verification, and audit UI (RightActions component)
     iotaConfig.ts          # IOTA package/registry IDs and backend URL
     main.tsx               # React entry point with IOTA providers
 Move.toml                  # Move package configuration

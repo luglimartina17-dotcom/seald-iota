@@ -1,27 +1,65 @@
-# Backend
+# Backend — IOTA Digital Rights API
 
-This folder contains the FastAPI backend for the digital rights MVP.
+Python/FastAPI backend for the SealD digital rights platform.
 
-## Responsibilities
+## Endpoints
 
-The backend is responsible for:
+### Vendor
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/vendor/register` | API key | Register a new vendor on-chain |
 
-- connecting to an IOTA testnet RPC node
-- consuming and indexing on-chain events
-- mirroring right state and transaction history in a local database
-- exposing REST APIs for issuers, internal services, and verifiers
-- providing public verification endpoints for machine-readable validity checks
+### Rights
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/right/mint` | API key | Mint a new digital right |
+| POST | `/right/activate` | API key | Activate an existing right |
+| POST | `/right/revoke` | API key | Revoke a right |
+| POST | `/right/renew` | API key | Renew a right (consume-and-recreate) |
+| GET | `/right/check/all` | Public | List all rights |
+| GET | `/right/check/{right_id}` | Public | Verify a right against chain + DB |
 
-## MVP role
+### Audit & Selective Disclosure
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/audit/{tx_digest}` | Public | Get full signed audit record |
+| POST | `/audit/{tx_digest}/export/partial` | Public | Download audit as JSON |
+| POST | `/audit/{tx_digest}/disclose` | Public | Selective disclosure — reveal chosen fields only |
+| POST | `/audit/{tx_digest}/disclose/export` | Public | Download disclosed payload as JSON |
 
-In the current MVP, the backend acts as the bridge between blockchain state and application-level verification workflows.  
-Its goal is not to replace on-chain truth, but to make rights easier to inspect, query, audit, and verify in operational contexts.
+### System
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/sync/transactions` | API key | Trigger transaction sync from IOTA RPC |
 
-## Planned evolution
+## Models
 
-The roadmap includes:
+- **Right** — off-chain mirror of an on-chain `DigitalRight` object
+- **ChainTx** — tracks submitted transactions and their confirmation status
+- **AuditRecord** — HMAC-signed audit records tied to transaction digests
 
-- audit export features
-- signed JSON / PDF evidence packages
-- compliance-oriented reporting
-- deeper support for privacy-preserving verification flows
+## Audit Service
+
+Every mint, activate, and revoke operation generates an `AuditRecord` with an HMAC-SHA256 signature over a canonical JSON payload. The selective disclosure MVP allows callers to request a subset of fields from the audit record; the server returns only those fields plus a new signature over the disclosed subset.
+
+## Selective Disclosure (MVP)
+
+The current implementation uses server-side field filtering with HMAC signing. This is an MVP placeholder — the planned evolution is to replace this with IOTA Identity Verifiable Credentials and Verifiable Presentations for cryptographic selective disclosure.
+
+## Setup
+
+```bash
+cp .env.example .env    # Edit with your values
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `IOTA_RPC` | IOTA testnet RPC URL | `https://api.testnet.iota.cafe` |
+| `API_KEY` | API key for protected endpoints | (empty = no auth) |
+| `ALLOWED_ORIGINS` | CORS origins | `http://localhost:5173` |
+| `AUDIT_SIGNING_KEY` | HMAC key for audit signatures | `dev-audit-secret` |
+| `AUDIT_NETWORK` | Network identifier in audit records | `testnet` |

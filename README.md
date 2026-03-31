@@ -49,7 +49,7 @@ backend/
 frontend/
   src/
     App.tsx               # Main React component with navigation
-    LicenseActions.tsx     # Dashboard and verification UI (exports RightActions)
+    RightActions.tsx        # Dashboard and verification UI (RightActions component)
     iotaConfig.ts          # IOTA package/registry IDs and backend URL
     main.tsx               # React entry point with IOTA providers
 Move.toml                  # Move package configuration

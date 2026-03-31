@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ConnectButton, useCurrentAccount } from '@iota/dapp-kit';
-import { RightActions } from './LicenseActions';
+import { RightActions } from './RightActions';
 import './App.css';
 
 export default function App() {

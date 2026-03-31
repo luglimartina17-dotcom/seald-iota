@@ -4,8 +4,8 @@
 
 - [ ] **Smart contract redeployment**: the Move contract has been renamed from `software_license` to `digital_rights` — a fresh deploy is required on testnet
 - [ ] **Update PACKAGE_ID and REGISTRY_ID** in `frontend/src/iotaConfig.ts` after redeploying the renamed contract
-- [ ] **Database migration**: table name changed from `licenses` to `rights`, column `onchain_license_id` to `onchain_right_id`, `license_key` to `right_key` — existing SQLite databases need migration or recreation
-- [ ] **Frontend file rename**: `LicenseActions.tsx` still has the old filename (exports `RightActions`) — rename file to `RightActions.tsx` and update import in `App.tsx`
+- [x] **Database migration**: table name changed from `licenses` to `rights`, column `onchain_license_id` to `onchain_right_id`, `license_key` to `right_key` — existing SQLite databases need migration or recreation
+- [x] **Frontend file rename**: `LicenseActions.tsx` still has the old filename (exports `RightActions`) — rename file to `RightActions.tsx` and update import in `App.tsx`
 - [ ] **Frontend: remaining Italian strings** — some placeholder text and date formatting still use Italian locale (e.g. `it-IT` in date formatting); translate to English or make locale configurable
 
 ## Roadmap — Next Steps

@@ -1,4 +1,4 @@
-﻿import { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ConnectButton, useCurrentAccount } from '@iota/dapp-kit';
 import { LicenseActions } from './LicenseActions';
 import './App.css';
@@ -28,7 +28,7 @@ export default function App() {
             </svg>
           </div>
           <div>
-            <span className="logo-text">LicenseChain</span>
+            <span className="logo-text">SealD</span>
             <span className="logo-sub">IOTA Â· Move</span>
           </div>
         </a>
@@ -44,7 +44,7 @@ export default function App() {
             className={`nav-tab ${currentPage === 'verify' ? 'active' : ''}`}
             onClick={() => setCurrentPage('verify')}
           >
-            Verifica
+            Check
           </button>
         </div>
 

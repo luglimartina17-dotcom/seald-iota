@@ -1,3 +1,5 @@
+// NOTE: PACKAGE_ID and REGISTRY_ID must be updated after redeploying the renamed contract
+// Move target: digital_rights::digital_rights
 export const PACKAGE_ID =
   '0x831ad44544bc9c5c75d785404d66e607db59105a9f74059a540d526d9a2c0eff';
 
@@ -7,6 +9,5 @@ export const REGISTRY_ID =
 export const CLOCK_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000006';
 
-// Usa variabile d'ambiente Vite, con fallback a localhost per sviluppo
 export const BACKEND_URL =
   import.meta.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8000';

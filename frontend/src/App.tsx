@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ConnectButton, useCurrentAccount } from '@iota/dapp-kit';
-import { LicenseActions } from './LicenseActions';
+import { RightActions } from './LicenseActions';
 import './App.css';
 
 export default function App() {
@@ -17,7 +17,7 @@ export default function App() {
 
   return (
     <>
-      {/* â”€â”€â”€ NAVBAR â”€â”€â”€ */}
+      {/* --- NAVBAR --- */}
       <nav>
         <a className="nav-logo" href="#" onClick={(e) => e.preventDefault()}>
           <div className="logo-icon">
@@ -29,7 +29,7 @@ export default function App() {
           </div>
           <div>
             <span className="logo-text">SealD</span>
-            <span className="logo-sub">IOTA Â· Move</span>
+            <span className="logo-sub">IOTA · Move</span>
           </div>
         </a>
 
@@ -54,14 +54,14 @@ export default function App() {
         </div>
       </nav>
 
-      {/* â”€â”€â”€ PAGES â”€â”€â”€ */}
-      <LicenseActions
+      {/* --- PAGES --- */}
+      <RightActions
         currentPage={currentPage}
         account={account}
         showToast={showToast}
       />
 
-      {/* â”€â”€â”€ TOAST â”€â”€â”€ */}
+      {/* --- TOAST --- */}
       <div className={`toast ${toastVisible ? 'show' : ''}`}>
         <span id="toast-msg">{toastMsg}</span>
       </div>

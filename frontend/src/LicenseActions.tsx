@@ -7,7 +7,7 @@ import { Transaction } from '@iota/iota-sdk/transactions';
 import { IotaClient, getFullnodeUrl } from '@iota/iota-sdk/client';
 import { PACKAGE_ID, REGISTRY_ID, BACKEND_URL, CLOCK_ID } from './iotaConfig';
 
-/* â”€â”€â”€ Types â”€â”€â”€ */
+/* --- Types --- */
 type ObjectChange = {
   type?: string;
   objectType?: string;
@@ -19,14 +19,14 @@ type TxResult = {
   objectChanges?: ObjectChange[];
 };
 
-type LicenseRow = {
+type RightRow = {
   id: number;
   product_id: string;
-  license_key: string;
+  right_key: string;
   vendor_wallet: string;
   owner_wallet: string;
   status: string;
-  onchain_license_id: string;
+  onchain_right_id: string;
   expiry_date: string;
   max_devices: number;
   current_devices: number;
@@ -38,7 +38,7 @@ type CheckResult = {
   found: boolean;
   valid: boolean;
   status: string;
-  onchain_license_id?: string;
+  onchain_right_id?: string;
   product_id?: string;
   vendor_wallet?: string;
   owner_wallet?: string;
@@ -61,88 +61,88 @@ interface Props {
   showToast: (msg: string) => void;
 }
 
-export function LicenseActions({ currentPage, account, showToast }: Props) {
+export function RightActions({ currentPage, account, showToast }: Props) {
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction();
 
-  /* â”€â”€â”€ Dashboard State â”€â”€â”€ */
-  const [licenses, setLicenses] = useState<LicenseRow[]>([]);
+  /* --- Dashboard State --- */
+  const [rights, setRights] = useState<RightRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
 
   // Form - Register Vendor
   const [companyName, setCompanyName] = useState('');
 
-  // Form - Mint License
+  // Form - Mint Right
   const [productId, setProductId] = useState('');
-  const [licenseKey, setLicenseKey] = useState('');
+  const [rightKey, setRightKey] = useState('');
   const [activationCode, setActivationCode] = useState('');
   const [expiryDate, setExpiryDate] = useState('0');
   const [maxDevices, setMaxDevices] = useState('1');
 
   // Actions
-  const [licenseObjectId, setLicenseObjectId] = useState('');
+  const [rightObjectId, setRightObjectId] = useState('');
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [mintingKey, setMintingKey] = useState('');
   const [minting, setMinting] = useState(false);
 
-  /* â”€â”€â”€ Verify State â”€â”€â”€ */
+  /* --- Verify State --- */
   const [verifyInput, setVerifyInput] = useState('');
   const [verifyResult, setVerifyResult] = useState<CheckResult | null>(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [verifyHistory, setVerifyHistory] = useState<VerifyHistory[]>(() => {
     try {
-      const saved = localStorage.getItem('licensechain_history');
+      const saved = localStorage.getItem('seald_history');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
 
-  /* â”€â”€â”€ Load licenses from backend â”€â”€â”€ */
+  /* --- Load rights from backend --- */
   useEffect(() => {
-    fetchLicenses();
+    fetchRights();
   }, []);
 
-  async function fetchLicenses() {
+  async function fetchRights() {
     setLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/license/check/all`);
+      const res = await fetch(`${BACKEND_URL}/right/check/all`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setLicenses(data);
+          setRights(data);
         }
       }
     } catch {
-      // Backend offline â€” OK, tabella vuota
+      // Backend offline — OK, empty table
     } finally {
       setLoading(false);
     }
   }
 
-  /* â”€â”€â”€ Stats â”€â”€â”€ */
-  const totalCount = licenses.length;
-  const mintedCount = licenses.filter(
-    (l) => l.status === 'minted' || l.status === 'activated'
+  /* --- Stats --- */
+  const totalCount = rights.length;
+  const mintedCount = rights.filter(
+    (r) => r.status === 'minted' || r.status === 'activated'
   ).length;
-  const pendingCount = licenses.filter((l) => l.status === 'submitted').length;
+  const pendingCount = rights.filter((r) => r.status === 'submitted').length;
 
-  /* â”€â”€â”€ Clipboard â”€â”€â”€ */
+  /* --- Clipboard --- */
   function copyKey(text: string) {
-    navigator.clipboard.writeText(text).then(() => showToast('âœ“ Copied: ' + text));
+    navigator.clipboard.writeText(text).then(() => showToast('Copied: ' + text));
   }
 
-  /* â”€â”€â”€ Register Vendor â”€â”€â”€ */
+  /* --- Register Vendor --- */
   async function registerVendor() {
-    if (!account) { showToast('âš  Connect your wallet'); return; }
-    if (!companyName.trim()) { showToast('âš  Enter your company name'); return; }
+    if (!account) { showToast('Connect your wallet'); return; }
+    if (!companyName.trim()) { showToast('Enter your company name'); return; }
     try {
       const tx = new Transaction();
       tx.moveCall({
-        target: `${PACKAGE_ID}::software_license::register_vendor`,
+        target: `${PACKAGE_ID}::digital_rights::register_vendor`,
         arguments: [
           tx.object(REGISTRY_ID),
           tx.pure.vector('u8', Array.from(new TextEncoder().encode(companyName))),
@@ -164,30 +164,30 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         }),
       });
 
-      showToast(`âœ“ Vendor registered! Digest: ${result.digest.slice(0, 16)}...`);
+      showToast(`Vendor registered! Digest: ${result.digest.slice(0, 16)}...`);
       setCompanyName('');
     } catch (error) {
       console.error('Error registerVendor:', error);
-      showToast('âš  Vendor registration Error');
+      showToast('Vendor registration Error');
     }
   }
 
-  /* â”€â”€â”€ Mint License â”€â”€â”€ */
-  async function mintLicense() {
-    if (!account) { showToast('âš  Connect your wallet'); return; }
-    if (!productId.trim() || !licenseKey.trim() || !activationCode.trim()) {
-      showToast('âš  Please fill in all fields');
+  /* --- Mint Right --- */
+  async function mintRight() {
+    if (!account) { showToast('Connect your wallet'); return; }
+    if (!productId.trim() || !rightKey.trim() || !activationCode.trim()) {
+      showToast('Please fill in all fields');
       return;
     }
     setMinting(true);
     try {
       const tx = new Transaction();
       tx.moveCall({
-        target: `${PACKAGE_ID}::software_license::mint_license`,
+        target: `${PACKAGE_ID}::digital_rights::mint_right`,
         arguments: [
           tx.object(REGISTRY_ID),
           tx.pure.vector('u8', Array.from(new TextEncoder().encode(productId))),
-          tx.pure.vector('u8', Array.from(new TextEncoder().encode(licenseKey))),
+          tx.pure.vector('u8', Array.from(new TextEncoder().encode(rightKey))),
           tx.pure.vector('u8', Array.from(new TextEncoder().encode(activationCode))),
           tx.pure.u64(BigInt(expiryDate)),
           tx.pure.u8(Number(maxDevices)),
@@ -205,64 +205,64 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         options: { showObjectChanges: true },
       });
 
-      const createdLicense = txDetails.objectChanges?.find((change) => {
+      const createdRight = txDetails.objectChanges?.find((change) => {
         return (
           change.type === 'created' &&
           typeof change.objectType === 'string' &&
-          change.objectType.endsWith('::software_license::SoftwareLicense')
+          change.objectType.endsWith('::digital_rights::DigitalRight')
         );
       });
 
-      const onchainLicenseId =
-        createdLicense && 'objectId' in createdLicense
-          ? (createdLicense as { objectId: string }).objectId
+      const onchainRightId =
+        createdRight && 'objectId' in createdRight
+          ? (createdRight as { objectId: string }).objectId
           : null;
 
-      if (onchainLicenseId) {
-        await fetch(`${BACKEND_URL}/license/mint`, {
+      if (onchainRightId) {
+        await fetch(`${BACKEND_URL}/right/mint`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             wallet: account.address,
             tx_digest: result.digest,
-            onchain_license_id: onchainLicenseId,
+            onchain_right_id: onchainRightId,
             product_id: productId,
-            license_key: licenseKey,
+            right_key: rightKey,
             expiry_date: Number(expiryDate),
             max_devices: Number(maxDevices),
           }),
         });
-        setLicenseObjectId(onchainLicenseId);
-        showToast(`âœ“ Right minted successfully! ID: ${onchainLicenseId.slice(0, 16)}...`);
+        setRightObjectId(onchainRightId);
+        showToast(`Right minted successfully! ID: ${onchainRightId.slice(0, 16)}...`);
       } else {
-        showToast(`âœ“ Mint complete! Digest: ${result.digest.slice(0, 16)}...`);
+        showToast(`Mint complete! Digest: ${result.digest.slice(0, 16)}...`);
       }
 
       setProductId('');
-      setLicenseKey('');
+      setRightKey('');
       setActivationCode('');
       setExpiryDate('0');
       setMaxDevices('1');
       setFormOpen(false);
-      fetchLicenses();
+      fetchRights();
     } catch (error) {
       console.error('Error mintRight:', error);
-      showToast('âš  Error during mint');
+      showToast('Error during mint');
     } finally {
       setMinting(false);
     }
   }
 
-  /* â”€â”€â”€ Activate License â”€â”€â”€ */
-  async function activateLicense() {
-    if (!account) { showToast('âš  Connect your wallet'); return; }
-    if (!licenseObjectId) { showToast('âš  Enter a right object ID'); return; }
+  /* --- Activate Right --- */
+  async function activateRight() {
+    if (!account) { showToast('Connect your wallet'); return; }
+    if (!rightObjectId) { showToast('Enter a right object ID'); return; }
     try {
       const tx = new Transaction();
       tx.moveCall({
-        target: `${PACKAGE_ID}::software_license::activate_license`,
+        target: `${PACKAGE_ID}::digital_rights::activate_right`,
         arguments: [
-          tx.object(licenseObjectId),
+          tx.object(rightObjectId),
           tx.pure.vector('u8', Array.from(new TextEncoder().encode(activationCode))),
           tx.object(CLOCK_ID),
         ],
@@ -272,65 +272,65 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         transaction: tx,
       })) as TxResult;
 
-      await fetch(`${BACKEND_URL}/license/activate`, {
+      await fetch(`${BACKEND_URL}/right/activate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: account.address,
           tx_digest: result.digest,
-          onchain_license_id: licenseObjectId,
+          onchain_right_id: rightObjectId,
         }),
       });
 
-      showToast(`âœ“ Right activated successfully! Digest: ${result.digest.slice(0, 16)}...`);
-      fetchLicenses();
+      showToast(`Right activated successfully! Digest: ${result.digest.slice(0, 16)}...`);
+      fetchRights();
     } catch (error) {
       console.error('Error activateRight:', error);
-      showToast('âš  Activation Error');
+      showToast('Activation Error');
     }
   }
 
-  /* â”€â”€â”€ Revoke License â”€â”€â”€ */
-  async function revokeLicense() {
-    if (!account) { showToast('âš  Connect your wallet'); return; }
-    if (!licenseObjectId) { showToast('âš  Enter a right object ID'); return; }
+  /* --- Revoke Right --- */
+  async function revokeRight() {
+    if (!account) { showToast('Connect your wallet'); return; }
+    if (!rightObjectId) { showToast('Enter a right object ID'); return; }
     try {
       const tx = new Transaction();
       tx.moveCall({
-        target: `${PACKAGE_ID}::software_license::revoke_license`,
-        arguments: [tx.object(licenseObjectId), tx.object(CLOCK_ID)],
+        target: `${PACKAGE_ID}::digital_rights::revoke_right`,
+        arguments: [tx.object(rightObjectId), tx.object(CLOCK_ID)],
       });
 
       const result = (await signAndExecuteTransaction({
         transaction: tx,
       })) as TxResult;
 
-      await fetch(`${BACKEND_URL}/license/revoke`, {
+      await fetch(`${BACKEND_URL}/right/revoke`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: account.address,
           tx_digest: result.digest,
-          onchain_license_id: licenseObjectId,
+          onchain_right_id: rightObjectId,
         }),
       });
 
-      showToast(`âœ“ Right revoked! Digest: ${result.digest.slice(0, 16)}...`);
-      fetchLicenses();
+      showToast(`Right revoked! Digest: ${result.digest.slice(0, 16)}...`);
+      fetchRights();
     } catch (error) {
       console.error('Error revokeRight:', error);
-      showToast('âš  Revoke Error');
+      showToast('Revoke Error');
     }
   }
 
-  /* â”€â”€â”€ Verify License â”€â”€â”€ */
-  async function verifyLicense() {
+  /* --- Verify Right --- */
+  async function verifyRight() {
     const input = verifyInput.trim();
     if (!input) return;
     setVerifyLoading(true);
     setVerifyResult(null);
     try {
-      const res = await fetch(`${BACKEND_URL}/license/check/${input}`);
+      const res = await fetch(`${BACKEND_URL}/right/check/${input}`);
       if (res.ok) {
         const data: CheckResult = await res.json();
         setVerifyResult(data);
@@ -342,13 +342,13 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
           now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
         const entry: VerifyHistory = {
           key: input,
-          product: data.product_id || 'â€”',
+          product: data.product_id || '\u2014',
           valid: data.valid,
           time,
         };
         const newHistory = [entry, ...verifyHistory].slice(0, 50);
         setVerifyHistory(newHistory);
-        localStorage.setItem('licensechain_history', JSON.stringify(newHistory));
+        localStorage.setItem('seald_history', JSON.stringify(newHistory));
       } else {
         setVerifyResult({
           found: false,
@@ -358,13 +358,13 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         });
       }
     } catch {
-      showToast('âš  Backend unreachable');
+      showToast('Backend unreachable');
     } finally {
       setVerifyLoading(false);
     }
   }
 
-  /* â”€â”€â”€ Status badge helper â”€â”€â”€ */
+  /* --- Status badge helper --- */
   function statusClass(status: string, revoked: boolean): string {
     if (revoked) return 'status revoked';
     switch (status) {
@@ -394,17 +394,17 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
   }
 
   function truncHash(h: string): string {
-    if (!h || h === 'â€”') return 'â€”';
+    if (!h || h === '\u2014') return '\u2014';
     if (h.length > 16) return h.slice(0, 8) + '...' + h.slice(-4);
     return h;
   }
 
-  /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  /* ===============================================
      RENDER
-     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+     =============================================== */
   return (
     <>
-      {/* â•â•â•â•â•â•â•â•â•â•â•â• DASHBOARD PAGE â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ============ DASHBOARD PAGE ============ */}
       <div className={`page ${currentPage === 'dashboard' ? 'active' : ''}`}>
         <div className="container">
           {/* Header */}
@@ -413,7 +413,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
               <div className="section-title">
                 Dashboard <span>Vendor</span>
               </div>
-              <div className="section-desc">// IOTA blockchain Â· right management</div>
+              <div className="section-desc">// IOTA blockchain · right management</div>
             </div>
           </div>
 
@@ -439,7 +439,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 </div>
               </div>
 
-              {/* License Table */}
+              {/* Right Table */}
               <div className="table-wrap">
                 <div className="table-header">
                   <span className="table-title">Right Management</span>
@@ -465,7 +465,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                           </div>
                         </td>
                       </tr>
-                    ) : licenses.length === 0 ? (
+                    ) : rights.length === 0 ? (
                       <tr>
                         <td colSpan={6}>
                           <div className="loading-row">
@@ -474,56 +474,56 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                         </td>
                       </tr>
                     ) : (
-                      licenses.map((l) => (
-                        <tr key={l.id || l.onchain_license_id}>
-                          <td>{l.product_id}</td>
+                      rights.map((r) => (
+                        <tr key={r.id || r.onchain_right_id}>
+                          <td>{r.product_id}</td>
                           <td>
                             <span className="key-badge">
-                              {l.license_key}{' '}
-                              <button onClick={() => copyKey(l.license_key)}>âŽ˜</button>
+                              {r.right_key}{' '}
+                              <button onClick={() => copyKey(r.right_key)}>&#8984;</button>
                             </span>
                           </td>
                           <td>
                             <span className="hash">
-                              {truncHash(l.owner_wallet)}
+                              {truncHash(r.owner_wallet)}
                             </span>
                           </td>
                           <td>
-                            <span className={statusClass(l.status, l.revoked)}>
-                              {statusLabel(l.status, l.revoked)}
+                            <span className={statusClass(r.status, r.revoked)}>
+                              {statusLabel(r.status, r.revoked)}
                             </span>
                           </td>
                           <td>
                             <span className="hash">
-                              {truncHash(l.onchain_license_id)}{' '}
-                              {l.onchain_license_id && l.onchain_license_id !== 'â€”' && (
-                                <button onClick={() => copyKey(l.onchain_license_id)}>
-                                  âŽ˜
+                              {truncHash(r.onchain_right_id)}{' '}
+                              {r.onchain_right_id && r.onchain_right_id !== '\u2014' && (
+                                <button onClick={() => copyKey(r.onchain_right_id)}>
+                                  &#8984;
                                 </button>
                               )}
                             </span>
                           </td>
                           <td>
                             <div className="action-row">
-                              {l.status === 'submitted' ? (
+                              {r.status === 'submitted' ? (
                                 <button className="btn btn-mint" onClick={() => {
-                                  setMintingKey(l.license_key);
+                                  setMintingKey(r.right_key);
                                   setModalOpen(true);
                                 }}>
-                                  â¬¡ Mint
+                                  Mint
                                 </button>
-                              ) : !l.revoked && l.status !== 'activated' ? (
+                              ) : !r.revoked && r.status !== 'activated' ? (
                                 <button
                                   className="btn btn-ghost"
                                   onClick={() => {
-                                    setLicenseObjectId(l.onchain_license_id);
+                                    setRightObjectId(r.onchain_right_id);
                                     setActivationCode('');
                                   }}
                                 >
-                                  Active
+                                  Activate
                                 </button>
                               ) : (
-                                <button className="btn btn-completed">âœ“ Complete</button>
+                                <button className="btn btn-completed">Complete</button>
                               )}
                             </div>
                           </td>
@@ -534,7 +534,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 </table>
               </div>
 
-              {/* â”€â”€â”€ Register Vendor Section â”€â”€â”€ */}
+              {/* --- Register Vendor Section --- */}
               <div className="create-panel" style={{ marginBottom: 24 }}>
                 <div className="create-panel-header">
                   <div>
@@ -550,7 +550,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       <label className="form-label">Company name</label>
                       <input
                         className="form-input"
-                        placeholder="es. MioSoftware Srl"
+                        placeholder="e.g. Acme Corp"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                       />
@@ -564,17 +564,17 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 </div>
               </div>
 
-              {/* â”€â”€â”€ Create (Mint) License Panel â”€â”€â”€ */}
+              {/* --- Create (Mint) Right Panel --- */}
               <div className="create-panel">
                 <div className="create-panel-header">
                   <div>
                     <div className="table-title">+ Create New Right</div>
                     <div className="section-desc" style={{ marginTop: 2 }}>
-                      // generate and register on IOTA blockchain 
+                      // generate and register on IOTA blockchain
                     </div>
                   </div>
                   <button className="btn btn-primary" onClick={() => setFormOpen(!formOpen)}>
-                    {formOpen ? 'Chiudi' : 'Apri Form'}
+                    {formOpen ? 'Close' : 'Open Form'}
                   </button>
                 </div>
                 <div className={`create-panel-body ${formOpen ? 'open' : ''}`}>
@@ -583,7 +583,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       <label className="form-label">Product ID</label>
                       <input
                         className="form-input"
-                        placeholder="es. software-pro-2025"
+                        placeholder="e.g. software-pro-2025"
                         value={productId}
                         onChange={(e) => setProductId(e.target.value)}
                       />
@@ -592,9 +592,9 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       <label className="form-label">Right Key</label>
                       <input
                         className="form-input"
-                        placeholder="es. SP25-XXXX-YYYY-ZZZZ"
-                        value={licenseKey}
-                        onChange={(e) => setLicenseKey(e.target.value)}
+                        placeholder="e.g. SP25-XXXX-YYYY-ZZZZ"
+                        value={rightKey}
+                        onChange={(e) => setRightKey(e.target.value)}
                       />
                     </div>
                   </div>
@@ -603,7 +603,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       <label className="form-label">Activation Code</label>
                       <input
                         className="form-input"
-                        placeholder="Codice segreto di attivazione"
+                        placeholder="Secret activation code"
                         value={activationCode}
                         onChange={(e) => setActivationCode(e.target.value)}
                       />
@@ -633,15 +633,15 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                     <button
                       className="btn btn-primary"
-                      onClick={mintLicense}
+                      onClick={mintRight}
                       disabled={minting}
                     >
                       {minting ? (
                         <>
-                          <span className="spinner" /> Mining...
+                          <span className="spinner" /> Minting...
                         </>
                       ) : (
-                        'â¬¡ Mint Right'
+                        'Mint Right'
                       )}
                     </button>
                     <button className="btn btn-ghost" onClick={() => setFormOpen(false)}>
@@ -651,14 +651,14 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 </div>
               </div>
 
-              {/* â”€â”€â”€ License Actions (Activate / Revoke / Check) â”€â”€â”€ */}
-              {licenseObjectId && (
+              {/* --- Right Actions (Activate / Revoke) --- */}
+              {rightObjectId && (
                 <div className="create-panel" style={{ marginTop: 24 }}>
                   <div className="create-panel-header">
                     <div>
                       <div className="table-title">Right Actions</div>
                       <div className="section-desc" style={{ marginTop: 2 }}>
-                        // activate, revoke or verify a right 
+                        // activate, revoke or verify a right
                       </div>
                     </div>
                   </div>
@@ -669,8 +669,8 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                         <input
                           className="form-input"
                           placeholder="0x..."
-                          value={licenseObjectId}
-                          onChange={(e) => setLicenseObjectId(e.target.value)}
+                          value={rightObjectId}
+                          onChange={(e) => setRightObjectId(e.target.value)}
                         />
                       </div>
                       <div className="form-group">
@@ -684,10 +684,10 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                      <button className="btn btn-primary" onClick={activateLicense}>
+                      <button className="btn btn-primary" onClick={activateRight}>
                         Activate Right
                       </button>
-                      <button className="btn btn-danger" onClick={revokeLicense}>
+                      <button className="btn btn-danger" onClick={revokeRight}>
                         Revoke Right
                       </button>
                     </div>
@@ -699,7 +699,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         </div>
       </div>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â• VERIFY PAGE â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ============ VERIFY PAGE ============ */}
       <div className={`page ${currentPage === 'verify' ? 'active' : ''}`}>
         <div className="container">
           <div className="section-header">
@@ -727,12 +727,12 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                 value={verifyInput}
                 onChange={(e) => setVerifyInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') verifyLicense();
+                  if (e.key === 'Enter') verifyRight();
                 }}
               />
               <button
                 className="btn btn-primary"
-                onClick={verifyLicense}
+                onClick={verifyRight}
                 disabled={verifyLoading}
                 style={{ padding: '12px 24px', fontSize: 14 }}
               >
@@ -760,7 +760,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                     verifyResult.valid ? 'valid' : 'invalid'
                   }`}
                 >
-                  {verifyResult.valid ? 'âœ“' : 'âœ—'}
+                  {verifyResult.valid ? '\u2713' : '\u2717'}
                 </div>
                 <div>
                   <div
@@ -789,7 +789,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                   <div className="result-field">
                     <div className="result-field-label">Product</div>
                     <div className="result-field-value">
-                      {verifyResult.product_id || 'â€”'}
+                      {verifyResult.product_id || '\u2014'}
                     </div>
                   </div>
                   <div className="result-field">
@@ -808,19 +808,19 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
                   <div className="result-field">
                     <div className="result-field-label">Owner</div>
                     <div className="result-field-value">
-                      {verifyResult.owner_wallet || 'â€”'}
+                      {verifyResult.owner_wallet || '\u2014'}
                     </div>
                   </div>
                   <div className="result-field">
                     <div className="result-field-label">Vendor</div>
                     <div className="result-field-value">
-                      {verifyResult.vendor_wallet || 'â€”'}
+                      {verifyResult.vendor_wallet || '\u2014'}
                     </div>
                   </div>
                   <div className="result-field" style={{ gridColumn: '1 / -1' }}>
                     <div className="result-field-label">On-chain ID</div>
                     <div className="result-field-value">
-                      {verifyResult.onchain_license_id || 'â€”'}
+                      {verifyResult.onchain_right_id || '\u2014'}
                     </div>
                   </div>
                 </div>
@@ -857,10 +857,10 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
         </div>
       </div>
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â• MINT MODAL â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ============ MINT MODAL ============ */}
       <div className={`modal-overlay ${modalOpen ? 'show' : ''}`}>
         <div className="modal">
-          <div className="modal-title">â¬¡ Confirm Mint</div>
+          <div className="modal-title">Confirm Mint</div>
           <div className="modal-desc">
             // Sending TX to IOTA blockchain...
           </div>
@@ -870,7 +870,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
             <div className="modal-body-label" style={{ marginTop: 8 }}>
               NETWORK
             </div>
-            <div>IOTA Testnet Â· Move VM</div>
+            <div>IOTA Testnet · Move VM</div>
             <div className="modal-body-label" style={{ marginTop: 8 }}>
               ESTIMATED GAS
             </div>
@@ -884,7 +884,7 @@ export function LicenseActions({ currentPage, account, showToast }: Props) {
               className="btn btn-primary"
               onClick={() => {
                 setModalOpen(false);
-                mintLicense();
+                mintRight();
               }}
             >
               Confirm Mint

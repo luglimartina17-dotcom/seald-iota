@@ -1,4 +1,4 @@
-module software_license::software_license {
+module digital_rights::digital_rights {
     use iota::object::{Self, UID, ID};
     use iota::transfer;
     use iota::tx_context::{Self, TxContext, sender};
@@ -8,28 +8,28 @@ module software_license::software_license {
     use iota::table::{Self, Table};
     use std::hash;
 
-    // Codici di errore
-    const ELicenseNotActive: u64 = 1;
-    const ELicenseExpired: u64 = 2;
+    // Error codes
+    const ERightNotActive: u64 = 1;
+    const ERightExpired: u64 = 2;
     const EInvalidActivationCode: u64 = 3;
-    const ELicenseAlreadyActivated: u64 = 4;
+    const ERightAlreadyActivated: u64 = 4;
     const ENotVendor: u64 = 5;
     const EVendorNotRegistered: u64 = 6;
     const EInvalidExpiryDate: u64 = 7;
-    const ELicenseRevoked: u64 = 8;
+    const ERightRevoked: u64 = 8;
     const EVendorAlreadyRegistered: u64 = 9;
     const EMaxDevicesReached: u64 = 10;
     const ENoDevicesToRemove: u64 = 11;
     const ENotOwner: u64 = 12;
 
-    // Strutture dati
-    public struct SOFTWARE_LICENSE has drop {}
+    // Data structures
+    public struct DIGITAL_RIGHTS has drop {}
 
-    /// NFT LICENZA PRE-ATTIVAZIONE
-    public struct SoftwareLicense has key, store {
+    /// Digital right NFT
+    public struct DigitalRight has key, store {
         id: UID,
         product_id: String,
-        license_key: String,
+        right_key: String,
         vendor: address,
         activation_code_hash: vector<u8>,
         created_at: u64,
@@ -43,67 +43,76 @@ module software_license::software_license {
         revoked_at: u64,
     }
 
-    /// Info Vendor
+    /// Vendor info
     public struct VendorInfo has store {
         vendor_address: address,
         company_name: String,
         registered_at: u64,
-        total_licenses_issued: u64,
+        total_rights_issued: u64,
         is_active: bool,
     }
 
-    /// Registry Vendor
+    /// Vendor registry
     public struct VendorRegistry has key {
         id: UID,
         vendors: Table<address, VendorInfo>,
         total_vendors: u64,
-        total_licenses_minted: u64,
+        total_rights_minted: u64,
     }
 
-    /// Capability amministratore
+    /// Admin capability
     public struct AdminCap has key, store {
         id: UID,
     }
 
-    // Eventi
-    public struct LicenseMinted has copy, drop {
-        license_id: ID,
+    // Events
+    public struct RightMinted has copy, drop {
+        right_id: ID,
         product_id: String,
         vendor: address,
         created_at: u64,
     }
 
-    public struct LicenseActivated has copy, drop {
-        license_id: ID,
+    public struct RightActivated has copy, drop {
+        right_id: ID,
         product_id: String,
         activated_by: address,
         activated_at: u64,
     }
 
-    public struct LicenseRevoked has copy, drop {
-        license_id: ID,
+    public struct RightRevoked has copy, drop {
+        right_id: ID,
         revoked_by: address,
         revoked_at: u64,
     }
 
     public struct DeviceAdded has copy, drop {
-        license_id: ID,
+        right_id: ID,
         current_devices: u8,
         max_devices: u8,
     }
 
     public struct DeviceRemoved has copy, drop {
-        license_id: ID,
+        right_id: ID,
         current_devices: u8,
     }
 
-    // Init - viene eseguita una sola volta al deploy
-    fun init(witness: SOFTWARE_LICENSE, ctx: &mut TxContext) {
+    /// Event for right renewal (consume-and-recreate)
+    public struct RightRenewed has copy, drop {
+        old_right_id: ID,
+        new_right_id: ID,
+        renewed_by: address,
+        new_expiry_date: u64,
+        renewed_at: u64,
+    }
+
+    // Init — runs once at deploy
+    fun init(witness: DIGITAL_RIGHTS, ctx: &mut TxContext) {
         let registry = VendorRegistry {
             id: object::new(ctx),
             vendors: table::new(ctx),
             total_vendors: 0,
-            total_licenses_minted: 0,
+            total_rights_minted: 0,
         };
         transfer::share_object(registry);
         let admin_cap = AdminCap {
@@ -113,9 +122,9 @@ module software_license::software_license {
         let _ = witness;
     }
 
-    // Funzioni principali
+    // Entry functions
 
-    /// Registrazione vendor
+    /// Register vendor
     public entry fun register_vendor(
         registry: &mut VendorRegistry,
         company_name: vector<u8>,
@@ -129,18 +138,18 @@ module software_license::software_license {
             vendor_address,
             company_name: string::utf8(company_name),
             registered_at: timestamp,
-            total_licenses_issued: 0,
+            total_rights_issued: 0,
             is_active: true,
         };
         table::add(&mut registry.vendors, vendor_address, vendor_info);
         registry.total_vendors = registry.total_vendors + 1;
     }
 
-    /// Mint licenza NFT
-    public entry fun mint_license(
+    /// Mint a digital right NFT
+    public entry fun mint_right(
         registry: &mut VendorRegistry,
         product_id: vector<u8>,
-        license_key: vector<u8>,
+        right_key: vector<u8>,
         activation_code: vector<u8>,
         expiry_date: u64,
         max_devices: u8,
@@ -154,12 +163,12 @@ module software_license::software_license {
             assert!(expiry_date > timestamp, EInvalidExpiryDate);
         };
         let activation_code_hash = hash::sha3_256(activation_code);
-        let license_uid = object::new(ctx);
-        let license_id = object::uid_to_inner(&license_uid);
-        let license = SoftwareLicense {
-            id: license_uid,
+        let right_uid = object::new(ctx);
+        let right_id = object::uid_to_inner(&right_uid);
+        let right = DigitalRight {
+            id: right_uid,
             product_id: string::utf8(product_id),
-            license_key: string::utf8(license_key),
+            right_key: string::utf8(right_key),
             vendor,
             activation_code_hash,
             created_at: timestamp,
@@ -173,112 +182,184 @@ module software_license::software_license {
             revoked_at: 0,
         };
         let vendor_info = table::borrow_mut(&mut registry.vendors, vendor);
-        vendor_info.total_licenses_issued = vendor_info.total_licenses_issued + 1;
-        registry.total_licenses_minted = registry.total_licenses_minted + 1;
-        event::emit(LicenseMinted {
-            license_id,
+        vendor_info.total_rights_issued = vendor_info.total_rights_issued + 1;
+        registry.total_rights_minted = registry.total_rights_minted + 1;
+        event::emit(RightMinted {
+            right_id,
             product_id: string::utf8(product_id),
             vendor,
             created_at: timestamp,
         });
-        transfer::public_transfer(license, vendor);
+        transfer::public_transfer(right, vendor);
     }
 
-    /// Attivazione licenza
-    public entry fun activate_license(
-        mut license: SoftwareLicense,
+    /// Activate a right
+    public entry fun activate_right(
+        mut right: DigitalRight,
         activation_code: vector<u8>,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
         let timestamp = clock::timestamp_ms(clock);
         let user = sender(ctx);
-        assert!(license.is_active, ELicenseNotActive);
-        assert!(!license.activated, ELicenseAlreadyActivated);
+        assert!(right.is_active, ERightNotActive);
+        assert!(!right.activated, ERightAlreadyActivated);
         let provided_hash = hash::sha3_256(activation_code);
-        assert!(provided_hash == license.activation_code_hash, EInvalidActivationCode);
-        if (license.expiry_date != 0) {
-            assert!(timestamp < license.expiry_date, ELicenseExpired);
+        assert!(provided_hash == right.activation_code_hash, EInvalidActivationCode);
+        if (right.expiry_date != 0) {
+            assert!(timestamp < right.expiry_date, ERightExpired);
         };
-        assert!(!license.revoked, ELicenseRevoked);
-        let license_id = object::id(&license);
-        let product_id_copy = license.product_id;
-        license.activated = true;
-        license.activated_at = timestamp;
-        event::emit(LicenseActivated {
-            license_id,
+        assert!(!right.revoked, ERightRevoked);
+        let right_id = object::id(&right);
+        let product_id_copy = right.product_id;
+        right.activated = true;
+        right.activated_at = timestamp;
+        event::emit(RightActivated {
+            right_id,
             product_id: product_id_copy,
             activated_by: user,
             activated_at: timestamp,
         });
-        transfer::public_transfer(license, user);
+        transfer::public_transfer(right, user);
     }
 
-    /// Verifica licenza
-    public fun is_license_valid(license: &SoftwareLicense, clock: &Clock): bool {
+    /// Check if a right is valid
+    public fun is_right_valid(right: &DigitalRight, clock: &Clock): bool {
         let timestamp = clock::timestamp_ms(clock);
-        if (!license.is_active) return false;
-        if (!license.activated) return false;
-        if (license.revoked) return false;
-        if (license.expiry_date != 0 && timestamp >= license.expiry_date) return false;
+        if (!right.is_active) return false;
+        if (!right.activated) return false;
+        if (right.revoked) return false;
+        if (right.expiry_date != 0 && timestamp >= right.expiry_date) return false;
         true
     }
 
-    /// Revoca una licenza (solo il vendor puo farlo)
-    public entry fun revoke_license(
-        license: &mut SoftwareLicense,
+    /// Revoke a right (only the vendor can do this)
+    public entry fun revoke_right(
+        right: &mut DigitalRight,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
         let caller = sender(ctx);
         let timestamp = clock::timestamp_ms(clock);
-        assert!(caller == license.vendor, ENotVendor);
-        license.revoked = true;
-        license.revoked_at = timestamp;
-        license.is_active = false;
-        event::emit(LicenseRevoked {
-            license_id: object::id(license),
+        assert!(caller == right.vendor, ENotVendor);
+        right.revoked = true;
+        right.revoked_at = timestamp;
+        right.is_active = false;
+        event::emit(RightRevoked {
+            right_id: object::id(right),
             revoked_by: caller,
             revoked_at: timestamp,
         });
     }
 
-    /// Aggiunge un device alla licenza (solo il proprietario)
+    /// Add a device to the right (only the owner)
     public entry fun add_device(
-        license: &mut SoftwareLicense,
+        right: &mut DigitalRight,
         ctx: &mut TxContext
     ) {
         let caller = sender(ctx);
-        // Solo il proprietario corrente (chi ha la licenza nel wallet) puo aggiungere device
-        // In Move su IOTA, il check di ownership e' garantito dal fatto che la licenza
-        // e' un oggetto con key: solo chi la possiede puo passarla come &mut
-        assert!(license.is_active, ELicenseNotActive);
-        assert!(license.activated, ELicenseNotActive);
-        assert!(!license.revoked, ELicenseRevoked);
-        assert!(license.current_devices < license.max_devices, EMaxDevicesReached);
+        assert!(right.is_active, ERightNotActive);
+        assert!(right.activated, ERightNotActive);
+        assert!(!right.revoked, ERightRevoked);
+        assert!(right.current_devices < right.max_devices, EMaxDevicesReached);
         let _ = caller;
-        license.current_devices = license.current_devices + 1;
+        right.current_devices = right.current_devices + 1;
         event::emit(DeviceAdded {
-            license_id: object::id(license),
-            current_devices: license.current_devices,
-            max_devices: license.max_devices,
+            right_id: object::id(right),
+            current_devices: right.current_devices,
+            max_devices: right.max_devices,
         });
     }
 
-    /// Rimuove un device dalla licenza (solo il proprietario)
+    /// Remove a device from the right (only the owner)
     public entry fun remove_device(
-        license: &mut SoftwareLicense,
+        right: &mut DigitalRight,
         ctx: &mut TxContext
     ) {
         let caller = sender(ctx);
-        assert!(license.is_active, ELicenseNotActive);
-        assert!(!license.revoked, ELicenseRevoked);
-        assert!(license.current_devices > 0, ENoDevicesToRemove);
+        assert!(right.is_active, ERightNotActive);
+        assert!(!right.revoked, ERightRevoked);
+        assert!(right.current_devices > 0, ENoDevicesToRemove);
         let _ = caller;
-        license.current_devices = license.current_devices - 1;
+        right.current_devices = right.current_devices - 1;
         event::emit(DeviceRemoved {
-            license_id: object::id(license),
-            current_devices: license.current_devices,
+            right_id: object::id(right),
+            current_devices: right.current_devices,
         });
+    }
+
+    /// Renew a right: consumes the old object and creates a new one with updated expiry.
+    /// This is the minimal consume-and-recreate lifecycle pattern.
+    /// Only the vendor who originally issued the right can renew it.
+    public entry fun renew_right(
+        right: DigitalRight,
+        new_expiry_date: u64,
+        clock: &Clock,
+        ctx: &mut TxContext
+    ) {
+        let caller = sender(ctx);
+        let timestamp = clock::timestamp_ms(clock);
+
+        // Only the vendor can renew
+        assert!(caller == right.vendor, ENotVendor);
+        // Must not be revoked
+        assert!(!right.revoked, ERightRevoked);
+        // New expiry must be in the future (if not perpetual)
+        if (new_expiry_date != 0) {
+            assert!(new_expiry_date > timestamp, EInvalidExpiryDate);
+        };
+
+        let old_right_id = object::id(&right);
+
+        // Destructure the old right (consume it)
+        let DigitalRight {
+            id,
+            product_id,
+            right_key,
+            vendor,
+            activation_code_hash,
+            created_at: _,
+            expiry_date: _,
+            is_active,
+            activated,
+            activated_at,
+            max_devices,
+            current_devices,
+            revoked: _,
+            revoked_at: _,
+        } = right;
+
+        object::delete(id);
+
+        // Create the new version
+        let new_uid = object::new(ctx);
+        let new_right_id = object::uid_to_inner(&new_uid);
+
+        let new_right = DigitalRight {
+            id: new_uid,
+            product_id,
+            right_key,
+            vendor,
+            activation_code_hash,
+            created_at: timestamp,
+            expiry_date: new_expiry_date,
+            is_active,
+            activated,
+            activated_at,
+            max_devices,
+            current_devices,
+            revoked: false,
+            revoked_at: 0,
+        };
+
+        event::emit(RightRenewed {
+            old_right_id,
+            new_right_id,
+            renewed_by: caller,
+            new_expiry_date,
+            renewed_at: timestamp,
+        });
+
+        transfer::public_transfer(new_right, caller);
     }
 }

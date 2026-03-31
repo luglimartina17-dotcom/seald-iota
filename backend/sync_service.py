@@ -3,10 +3,10 @@ import models
 from iota_reader import get_transaction
 from typing import Optional
 
-LICENSE_TYPE_SUFFIX = "::software_license::SoftwareLicense"
+RIGHT_TYPE_SUFFIX = "::digital_rights::DigitalRight"
 
 
-def extract_created_license_id(tx_data: dict) -> Optional[str]:
+def extract_created_right_id(tx_data: dict) -> Optional[str]:
     object_changes = tx_data.get("objectChanges", []) or []
 
     for change in object_changes:
@@ -14,7 +14,7 @@ def extract_created_license_id(tx_data: dict) -> Optional[str]:
         if (
             change.get("type") == "created"
             and isinstance(object_type, str)
-            and object_type.endswith(LICENSE_TYPE_SUFFIX)
+            and object_type.endswith(RIGHT_TYPE_SUFFIX)
         ):
             return change.get("objectId")
 
@@ -32,7 +32,6 @@ def sync_submitted_transactions(db: Session):
         try:
             tx_data = get_transaction(tx_row.tx_digest)
         except Exception:
-            # RPC non disponibile o tx non ancora trovata
             continue
 
         effects = tx_data.get("effects", {}) or {}
@@ -42,19 +41,30 @@ def sync_submitted_transactions(db: Session):
         if status == "success":
             tx_row.status = "confirmed"
 
-            # Se è un mint, proviamo a ricavare il vero object id della licenza
-            if tx_row.action == "mint_license":
-                created_license_id = extract_created_license_id(tx_data)
+            if tx_row.action == "mint_right":
+                created_right_id = extract_created_right_id(tx_data)
 
-                if created_license_id:
-                    license_row = (
-                        db.query(models.License)
-                        .filter(models.License.tx_digest == tx_row.tx_digest)
+                if created_right_id:
+                    right_row = (
+                        db.query(models.Right)
+                        .filter(models.Right.tx_digest == tx_row.tx_digest)
                         .first()
                     )
-                    if license_row and not license_row.onchain_license_id:
-                        license_row.onchain_license_id = created_license_id
-                        tx_row.object_id = created_license_id
+                    if right_row and not right_row.onchain_right_id:
+                        right_row.onchain_right_id = created_right_id
+                        tx_row.object_id = created_right_id
+
+            elif tx_row.action == "renew_right":
+                created_right_id = extract_created_right_id(tx_data)
+                if created_right_id:
+                    right_row = (
+                        db.query(models.Right)
+                        .filter(models.Right.tx_digest == tx_row.tx_digest)
+                        .first()
+                    )
+                    if right_row and not right_row.onchain_right_id:
+                        right_row.onchain_right_id = created_right_id
+                        tx_row.object_id = created_right_id
 
             db.commit()
 

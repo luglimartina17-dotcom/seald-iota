@@ -2,13 +2,13 @@ from sqlalchemy import Column, Integer, String, Boolean, Text
 from db import Base
 
 
-class License(Base):
-    __tablename__ = "licenses"
+class Right(Base):
+    __tablename__ = "rights"
 
     id = Column(Integer, primary_key=True, index=True)
-    onchain_license_id = Column(String, unique=True, index=True, nullable=True)
+    onchain_right_id = Column(String, unique=True, index=True, nullable=True)
     product_id = Column(String, nullable=True)
-    license_key = Column(String, nullable=True)
+    right_key = Column(String, nullable=True)
     vendor_wallet = Column(String, index=True, nullable=True)
     owner_wallet = Column(String, index=True, nullable=True)
     status = Column(String, default="pending")
@@ -30,3 +30,19 @@ class ChainTx(Base):
     object_id = Column(String, nullable=True)
     status = Column(String, default="submitted")
     payload_json = Column(Text, nullable=True)
+
+
+class AuditRecord(Base):
+    __tablename__ = "audit_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tx_digest = Column(String, unique=True, index=True)
+    onchain_object_id = Column(String, index=True, nullable=True)
+    product_id = Column(String, nullable=True)
+    right_key = Column(String, nullable=True)
+    vendor_wallet = Column(String, index=True, nullable=True)
+    owner_wallet = Column(String, index=True, nullable=True)
+    network = Column(String, default="testnet")
+    audit_payload = Column(Text, nullable=False)
+    signature = Column(Text, nullable=False)
+    issued_at = Column(String, nullable=False)

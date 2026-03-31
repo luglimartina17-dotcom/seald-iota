@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { ConnectButton, useCurrentAccount } from '@iota/dapp-kit';
-import { RightActions } from './RightActions';
+import { DashboardPage } from './DashboardPage';
+import { VerifyPage } from './VerifyPage';
 import './App.css';
 
 export default function App() {
   const account = useCurrentAccount();
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'verify' | 'audit'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'verify'>('dashboard');
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
 
@@ -44,13 +45,7 @@ export default function App() {
             className={`nav-tab ${currentPage === 'verify' ? 'active' : ''}`}
             onClick={() => setCurrentPage('verify')}
           >
-            Check
-          </button>
-          <button
-            className={`nav-tab ${currentPage === 'audit' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('audit')}
-          >
-            Audit
+            Verify
           </button>
         </div>
 
@@ -61,11 +56,12 @@ export default function App() {
       </nav>
 
       {/* --- PAGES --- */}
-      <RightActions
-        currentPage={currentPage}
-        account={account}
-        showToast={showToast}
-      />
+      <div className={`page ${currentPage === 'dashboard' ? 'active' : ''}`}>
+        <DashboardPage account={account} showToast={showToast} />
+      </div>
+      <div className={`page ${currentPage === 'verify' ? 'active' : ''}`}>
+        <VerifyPage showToast={showToast} />
+      </div>
 
       {/* --- TOAST --- */}
       <div className={`toast ${toastVisible ? 'show' : ''}`}>

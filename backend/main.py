@@ -338,6 +338,95 @@ def check_right(right_id: str, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/right/verify/{right_id}", response_model=schemas.VerifyRightResponse)
+def verify_right(right_id: str, db: Session = Depends(get_db)):
+    """Unified public verification: returns right status + audit record in one call."""
+    sync_submitted_transactions(db)
+
+    right_row = (
+        db.query(models.Right)
+        .filter(models.Right.onchain_right_id == right_id)
+        .first()
+    )
+
+    if not right_row:
+        return schemas.VerifyRightResponse(
+            found=False,
+            valid=False,
+            status="not_found",
+            reason="Right not found in DB",
+        )
+
+    # On-chain verification
+    try:
+        chain_obj = get_object(right_id)
+        data = chain_obj.get("data", {})
+        content = data.get("content", {})
+        fields = content.get("fields", {}) if isinstance(content, dict) else {}
+
+        is_active = fields.get("is_active", False)
+        activated = fields.get("activated", False)
+        revoked = fields.get("revoked", False)
+        expiry_date = int(fields.get("expiry_date", 0) or 0)
+
+        now_ms = int(time.time() * 1000)
+        valid = bool(
+            is_active
+            and activated
+            and not revoked
+            and (expiry_date == 0 or now_ms < expiry_date)
+        )
+
+        status = "valid" if valid else "invalid"
+        owner_data = data.get("owner") or {}
+        owner_wallet = owner_data.get("AddressOwner") if isinstance(owner_data, dict) else None
+
+        resp = schemas.VerifyRightResponse(
+            found=True,
+            valid=valid,
+            status=status,
+            onchain_right_id=right_id,
+            product_id=fields.get("product_id"),
+            vendor_wallet=fields.get("vendor"),
+            owner_wallet=owner_wallet,
+            activated=activated,
+            revoked=revoked,
+            expiry_date=expiry_date,
+            reason=None if valid else "Right inactive, not activated, revoked, or expired",
+        )
+    except Exception as exc:
+        resp = schemas.VerifyRightResponse(
+            found=True,
+            valid=(right_row.status == "activated" and not right_row.revoked),
+            status=right_row.status,
+            onchain_right_id=right_row.onchain_right_id,
+            product_id=right_row.product_id,
+            vendor_wallet=right_row.vendor_wallet,
+            owner_wallet=right_row.owner_wallet,
+            activated=(right_row.status == "activated"),
+            revoked=right_row.revoked,
+            expiry_date=int(right_row.expiry_date or 0),
+            reason=f"RPC unavailable, fallback DB only: {exc}",
+        )
+
+    # Look up audit record
+    tx_digest = right_row.tx_digest
+    if tx_digest:
+        audit_row = (
+            db.query(models.AuditRecord)
+            .filter(models.AuditRecord.tx_digest == tx_digest)
+            .first()
+        )
+        if audit_row:
+            resp.has_audit = True
+            resp.tx_digest = audit_row.tx_digest
+            resp.audit_signature = audit_row.signature
+            resp.audit_network = audit_row.network
+            resp.audit_issued_at = audit_row.issued_at
+
+    return resp
+
+
 @app.get("/audit/{tx_digest}", response_model=schemas.AuditResponse)
 def get_audit(tx_digest: str, db: Session = Depends(get_db)):
     sync_submitted_transactions(db)

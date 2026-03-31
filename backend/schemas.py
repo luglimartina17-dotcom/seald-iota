@@ -66,6 +66,25 @@ class AuditResponse(BaseModel):
     signature: Optional[str] = None
 
 
+class VerifyRightResponse(BaseModel):
+    found: bool
+    valid: bool
+    status: str
+    onchain_right_id: Optional[str] = None
+    product_id: Optional[str] = None
+    vendor_wallet: Optional[str] = None
+    owner_wallet: Optional[str] = None
+    activated: Optional[bool] = None
+    revoked: Optional[bool] = None
+    expiry_date: Optional[int] = None
+    reason: Optional[str] = None
+    has_audit: bool = False
+    tx_digest: Optional[str] = None
+    audit_signature: Optional[str] = None
+    audit_network: Optional[str] = None
+    audit_issued_at: Optional[str] = None
+
+
 class SelectiveDisclosureRequest(BaseModel):
     fields: list[str]
 

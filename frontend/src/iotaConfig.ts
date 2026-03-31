@@ -1,10 +1,10 @@
-// NOTE: PACKAGE_ID and REGISTRY_ID must be updated after redeploying the renamed contract
-// Move target: digital_rights::digital_rights
+// Deployed on IOTA Testnet - 2026-03-31
+// TX: E49BmzMNNceRf4Vuo4Z1QbukHgc2w7wgDkfDNR42RcLQ
 export const PACKAGE_ID =
-  '0x831ad44544bc9c5c75d785404d66e607db59105a9f74059a540d526d9a2c0eff';
+  '0xd9119df9913c62e4c0ab21570cfa22c5ace3a85677ade10c38bc557e2d187357';
 
 export const REGISTRY_ID =
-  '0x14eac2476ead3a690204a1d343731cb8f52684e63f3bf8a431cab2977b737058';
+  '0x8f22613d0f1ade5a6811bdb0d741b3e5ac79df09cb29aae909ca4d99a6547e88';
 
 export const CLOCK_ID =
   '0x0000000000000000000000000000000000000000000000000000000000000006';

@@ -18,6 +18,28 @@ from audit_service import (
 
 models.Base.metadata.create_all(bind=engine)
 
+# Seed demo data if DB is empty
+_seed_db = SessionLocal()
+if _seed_db.query(models.Right).count() == 0:
+    _demo_right = models.Right(
+        onchain_right_id="0x831ad44544bc9c5c75d785404d66e607db59105a9f74059a540d526d9a2c0eff",
+        product_id="PROD-001",
+        right_key="DEMO-KEY-001",
+        vendor_wallet="0xabc123vendor",
+        owner_wallet="0xdef456owner",
+        status="activated",
+        expiry_date="0",
+        max_devices=5,
+        current_devices=1,
+        revoked=False,
+        tx_digest="Cx5LqR0sU3nOdZaX9wKiMt4gH7oS2eB6fV1jP8zYl",
+    )
+    _seed_db.add(_demo_right)
+    _seed_db.commit()
+    _seed_db.refresh(_demo_right)
+    create_or_update_audit_for_right(_seed_db, _demo_right)
+_seed_db.close()
+
 app = FastAPI(title="IOTA Digital Rights API")
 
 # CORS
@@ -364,10 +386,17 @@ def verify_right(right_id: str, db: Session = Depends(get_db)):
         content = data.get("content", {})
         fields = content.get("fields", {}) if isinstance(content, dict) else {}
 
-        is_active = fields.get("is_active", False)
-        activated = fields.get("activated", False)
-        revoked = fields.get("revoked", False)
-        expiry_date = int(fields.get("expiry_date", 0) or 0)
+        # If fields dict is empty (RPC returned no content), fall back to DB-derived values
+        if not fields:
+            is_active = (right_row.status == "activated")
+            activated = (right_row.status == "activated")
+            revoked = bool(right_row.revoked)
+            expiry_date = int(right_row.expiry_date or 0)
+        else:
+            is_active = fields.get("is_active", False)
+            activated = fields.get("activated", False)
+            revoked = fields.get("revoked", False)
+            expiry_date = int(fields.get("expiry_date", 0) or 0)
 
         now_ms = int(time.time() * 1000)
         valid = bool(
@@ -386,9 +415,9 @@ def verify_right(right_id: str, db: Session = Depends(get_db)):
             valid=valid,
             status=status,
             onchain_right_id=right_id,
-            product_id=fields.get("product_id"),
-            vendor_wallet=fields.get("vendor"),
-            owner_wallet=owner_wallet,
+            product_id=fields.get("product_id") or right_row.product_id,
+            vendor_wallet=fields.get("vendor") or right_row.vendor_wallet,
+            owner_wallet=owner_wallet or right_row.owner_wallet,
             activated=activated,
             revoked=revoked,
             expiry_date=expiry_date,
